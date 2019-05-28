@@ -1,6 +1,6 @@
 import os
 from PyPDF2 import PdfFileReader, PdfFileWriter, PdfFileMerger
-import textract
+#import textract
 import glob
 
 import os
@@ -58,19 +58,7 @@ def info_run_pages(path):
 
 
 def extract_text(page):
-	text = page.extractText()
-
-	if text == '' or text.strip() == '':
-		temp_file = '.temp.pdf'
-
-		pdf_writer = PdfFileWriter()
-		pdf_writer.addPage(page)
- 
-		with open(temp_file, 'wb') as out:
-			pdf_writer.write(out)
-		text = textract.process(temp_file, method='tesseract', encoding='utf-8')
-
-	return text
+	return page.extractText()
 
 
 def get_info(path):
