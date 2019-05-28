@@ -153,3 +153,62 @@ class ClientTracker(QThread):
 			data = sockobj.recv(1024)
 			print("Cliente recebeu: ", data)
 			sockobj.close()
+
+
+class ServerPeer(QThread):
+	pass
+
+
+class ClientPeer(QThread):
+	def __init__ (self, ipsearch, text):
+		self.text = text
+		self.ipsearch = ipsearch
+		QThread.__init__(self)
+
+	def run(self):
+		'''
+		Lado cliente. Funciona como thread pois é eventualmente acionado pelo mesmo peer em que roda
+		o servidor no background.
+		Recebe 3 parâmetros:
+		word: É a palavra que o cliente quer procurar em algum servidor vizinho.
+		fromm: É o próprio IP do cliente. Quando este cliente é usado como ponte, deve levar
+		a o IP do cliente que requisitou a palavra até o servidor para que este tome uma decisão
+		ipsearch: É o IP (vizinho) que será buscado para talvez encontrar a palavra em seu dicionário
+		'''	
+		serverHost = self.ipsearch
+
+		sockobj = socket(AF_INET, SOCK_STREAM)
+		sockobj.connect((serverHost, 5000))
+		wordok = self.text
+
+		#linha = input("Informe a mensagem a ser buscada: ")
+
+		sockobj.send(wordok.encode())
+
+		data = sockobj.recv(1024)
+		print("Cliente recebeu: ", data)
+
+		sockobj.close()
+
+def client_without_thread(ipsearch, text):
+	try:
+		serverHost = ipsearch
+
+		sockobj = socket(AF_INET, SOCK_STREAM)
+		sockobj.connect((serverHost, 5000))
+		wordok = text
+
+		#linha = input("Informe a mensagem a ser buscada: ")
+
+		sockobj.send(wordok.encode())
+
+		data = sockobj.recv(1024)
+		print("Cliente recebeu: ", data)
+
+		sockobj.close()
+
+		return True
+	except Exception as e:
+		print(e)
+		return False
+	

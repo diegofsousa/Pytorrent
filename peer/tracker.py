@@ -187,8 +187,6 @@ class index(QDialog):
 
 		self.lista_de_palavras.clear()
 		self.lista.clear()
-		#self.server.clear_list_server()
-		#print(self.lista_de_vizinhos)
 
 	def reload(self, palavra):
 		'''
