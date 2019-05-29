@@ -2,7 +2,7 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 import sys, os, subprocess
 from socket import *
-from tracker_architecture import ClientPeer, client_without_thread
+from tracker_architecture import ClientPeer, ServerPeer, client_without_thread
 from threading import Thread, current_thread
 import random
 from form_dict import AddElem
@@ -33,6 +33,11 @@ class index(QDialog):
 			self.tracker_ip_dialog = QInputDialog.getText(self, 'Informe o host do Tracker', 'Tecle enter para confirmar:')
 		
 		self.tracker_ip = self.tracker_ip_dialog[0]
+
+		# Inicia-se o servidor do peer como thread e seus possíveis sinais
+		self.server = ServerPeer(self.ip)
+		self.connect(self.server, SIGNAL("reload_list(QString)"), self.reload_list)
+		self.server.start()
 
 		# Initialize tab screen
 		tabs = QTabWidget()
@@ -75,7 +80,7 @@ class index(QDialog):
 
 		self.lista = QListWidget()
 
-		self.lista_de_palavras = ['diego.pdf «» 23.6MB «» 2 peers', 'leo.pdf «» 10.6MB «» 1 peers']
+		self.lista_de_palavras = []
 
 		for i in self.lista_de_palavras:
 			item = QListWidgetItem(i)
@@ -90,7 +95,9 @@ class index(QDialog):
 		inforlogs = QLabel("Logs:")
 
 		self.text_logs = QTextEdit()
-		self.text_logs.setDisabled(True)
+		#self.text_logs.setDisabled(True)
+
+		self.info_logs = ''
 
 
 		vbox1 = QVBoxLayout()
@@ -164,6 +171,10 @@ class index(QDialog):
 
 		self.setLayout(vbox1)
 
+		self.connect(self.btn_clean_all, SIGNAL("clicked()"), self.my_files_clean)
+		self.connect(self.post_btn, SIGNAL("clicked()"), self.search_button)
+		self.connect(self.post_download, SIGNAL("clicked()"), self.download)
+
 
 		
 		self.setGeometry(300,100,700,430)
@@ -188,6 +199,7 @@ class index(QDialog):
 
 		if can_add == True:
 			info_new_file['protocol'] = 'new'
+			info_new_file['ip_from'] = self.ip
 			json_prepare = json.dumps(info_new_file)
 			#print(json_prepare)
 			#print(type(json))
@@ -196,6 +208,7 @@ class index(QDialog):
 				self.lista_de_meus_arquivos.append(info_new_file)
 				#print(self.lista_de_meus_arquivos)
 				self.reload_my_files_by_list()
+				msg = QMessageBox.information(self, "Mensagem","Obrigado por semear!\nConteudo esta disponivel no Tracker.", QMessageBox.Close)
 			else:
 				msg = QMessageBox.information(self, "Aviso","Ocorreu um erro ao adicionar o arquivo ao Tracker!", QMessageBox.Close)
 
@@ -208,10 +221,112 @@ class index(QDialog):
 			item = QListWidgetItem(i_to_str)
 			self.lista_meus_aquivos.addItem(item)
 		
+	def my_files_clean(self):
+
+		json_prepare = {"protocol":"clean_my_participations",
+						"ip_from":self.ip}
+
+		json_prepare = json.dumps(json_prepare)
+
+		if client_without_thread(self.tracker_ip, json_prepare) == True:
+			self.lista_de_meus_arquivos.clear()
+			#print(self.lista_de_meus_arquivos)
+			self.reload_my_files_by_list()
+			msg = QMessageBox.information(self, "Mensagem","Suas participacoes foram removidas do Tracker com sucesso!", QMessageBox.Close)
+		else:
+			msg = QMessageBox.information(self, "Aviso","Ocorreu um erro ao fazer este processamento!", QMessageBox.Close)
 		
+	def search_button(self):
+		text = self.arquivo_lineEdit.displayText()
+		upload = self.edit_file.displayText()
+
+		key = 'all' # 'all' files, 'upload' file or 'search' files
+
+		if text == '' and upload != '':
+			key = 'upload'
+		elif text != '' and upload == '':
+			key = 'search'
+
+		if key == 'all':
+			json_prepare = {"protocol":"search",
+							"key":key,
+							"ip_from":self.ip}
+		elif key == 'upload':
+			json_prepare = {"protocol":"search",
+							"key":key,
+							"ip_from":self.ip}
+		elif key == 'search':
+			json_prepare = {"protocol":"search",
+							"key":key,
+							"ip_from":self.ip,
+							"term": text}
+
+		json_prepare = json.dumps(json_prepare)
+
+		if client_without_thread(self.tracker_ip, json_prepare) == True:
+			self.lista_de_meus_arquivos.clear()
+			#print(self.lista_de_meus_arquivos)
+			#self.reload_my_files_by_list()
+			#msg = QMessageBox.information(self, "Mensagem","Suas participacoes foram removidas do Tracker com sucesso!", QMessageBox.Close)
+		else:
+			msg = QMessageBox.information(self, "Aviso","Ocorreu um erro ao fazer este processamento!", QMessageBox.Close)
+
+	def reload_list(self, text):
+		self.lista.clear()
+
+		self.lista_de_palavras = json.loads(text)['data']
+
+		for file in self.lista_de_palavras:
+			i_to_str = str("Nome: " + file['name'] + " «» Tamanho: " + str(file['size']) + " «» Numero de páginas: " + str(file['num_pages']) + " «» md5: " + str(file['md5']))
+			item = QListWidgetItem(i_to_str)
+			self.lista.addItem(item)
+
+	import subprocess
+
+	def download(self):
+		selected = self.lista.currentRow()
+		item = self.lista_de_palavras[selected]
+
+		self.info_logs +='''\nPreparando download do arquivo "{}"...
+				Revisando seeders...'''.format(item['name'])
+
+		hosts = []
+		valid_hosts = []
+
+		for ip in item['hosts']:
+			try:
+				nmap = subprocess.check_output(["nmap","-p","5000", ip]).decode()
+				status = nmap.split(" ")[24]
+				if status != 'open':
+					hosts.append([ip, None, None])
+				else:
+					latency = nmap.split("(")[2].split("s")[0]
+					hosts.append([ip, status, float(latency)])
+			except Exception as e:
+				pass
+
+		for host in hosts:
+			if host[1] == None:
+				self.info_logs += "\n"+host[0]+"... inacessível"
+			else:
+				valid_hosts.append(host)
+				self.info_logs += "\n"+host[0]+"... " + host[1] + " " + str(host[2])
+
+		valid_hosts.sort(key = sortSecond)
+
+		 
 
 
-			
+
+
+		self.reload_text_logs()
+
+
+	def reload_text_logs(self):
+		self.text_logs.setText(self.info_logs)
+
+def sortSecond(val): 
+	return val[2] 
 
 
 app = QApplication(sys.argv)
