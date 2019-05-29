@@ -4,6 +4,8 @@ from socket import *
 import time, _thread as thread
 from response import devolve
 
+import json
+
 
 class ServerTracker(QThread):
 	def __init__ (self, meuHost):
@@ -156,7 +158,56 @@ class ClientTracker(QThread):
 
 
 class ServerPeer(QThread):
-	pass
+	def __init__ (self, meuHost):
+		self.meuHost = meuHost
+		QThread.__init__(self)
+
+	def run(self):
+		'''
+		Configurações iniciais do servidor. Ele é uma thread por que deve funcionar sempre em background
+		enquando o Cliente deste mesmo peer irá funcionar eventualmente.
+		'''
+
+		self.sockobj = socket(AF_INET, SOCK_STREAM)
+		self.sockobj.bind((self.meuHost, 5000))
+		self.sockobj.listen(5)
+		print("Run, barry, run on: IP " + self.meuHost + " - Porta: " + str(5000))
+		self.despacha()
+
+
+
+	def busca(self, data):
+
+		print(data)
+		serializer = json.loads(data)
+
+		if serializer['protocol'] == 'reload_list':
+			self.emit(SIGNAL("reload_list(QString)"), data)
+		elif serializer['protocol'] == 'clean_my_participations':
+			self.emit(SIGNAL("clean_participations_from_ip(QString)"), data)
+		elif serializer['protocol'] == 'search':
+			self.emit(SIGNAL("seach_files(QString)"), data)
+
+	def lidaCliente(self, conexao):
+		'''
+		Este método é responsável por encaminhar os pedidos do cliente para as funções decodoficando
+		suas mensagens
+		'''
+		while True:
+			data = conexao.recv(1024)
+			if not data: break
+			conexao.send(b'Eco=> ')
+			self.busca(data.decode())
+
+	def despacha(self):
+		'''
+		Este método recebe as requisições dos clientes e os encaminham cada um para uma nova thread
+		'''
+		while True:
+			conexao, endereco = self.sockobj.accept()
+			print('Server foi requisitado ', endereco)
+			thread.start_new_thread(self.lidaCliente, (conexao,))
+		
 
 
 class ClientPeer(QThread):
@@ -203,10 +254,12 @@ def client_without_thread(ipsearch, text):
 		sockobj.send(wordok.encode())
 
 		data = sockobj.recv(1024)
-		print("Cliente recebeu: ", data)
+		print("Cliente recebeu: ", data.decode())
 
 		sockobj.close()
 
+		if data.decode() != "Ok":
+			return False	
 		return True
 	except Exception as e:
 		print(e)
