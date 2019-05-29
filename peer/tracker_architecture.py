@@ -2,8 +2,8 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from socket import *
 import time, _thread as thread
-from response import devolve
 
+import json
 
 class ServerTracker(QThread):
 	def __init__ (self, meuHost):
@@ -47,27 +47,37 @@ class ServerTracker(QThread):
 		o peer que requisitou a palavra.
 		'''
 
+		print(data)
+		serializer = json.loads(data)
+
+		if serializer['protocol'] == 'new':
+			self.emit(SIGNAL("new_file(QString)"), data)
+		elif serializer['protocol'] == 'clean_my_participations':
+			self.emit(SIGNAL("clean_participations_from_ip(QString)"), data)
+		elif serializer['protocol'] == 'search':
+			self.emit(SIGNAL("seach_files(QString)"), data)
+
 		# 3º Caso
-		if(data.split('^')[0] == 'r'):
-			#print("Achou a palavra: "+data.split('^')[1])
-			self.emit(SIGNAL("success(QString)"), data.split('^')[1])
-		# 4º Caso
-		elif(data.split('^')[0] == 'e'):
-			#print("Não achamos a peca certa "+data.split('^')[1])
-			self.emit(SIGNAL("fail()"))
-		else:
-			#print("Chegou na função de busca")
-			print(data.split('^')[0])
-			# 1º Caso
-			try:
-				significado = self.dicionario_dict[data.split('^')[0]]
-				if significado:					
-					thread.start_new_thread(devolve, (data.split('^')[1], significado))
-			# 2º Caso
-			except Exception as e:
-				print('Erro de busca')
-				self.emit(SIGNAL("forward(QString)"), data)				
-				return 'Nada foi encontrado'
+		# if(data.split('^')[0] == 'r'):
+		# 	#print("Achou a palavra: "+data.split('^')[1])
+		# 	self.emit(SIGNAL("success(QString)"), data.split('^')[1])
+		# # 4º Caso
+		# elif(data.split('^')[0] == 'e'):
+		# 	#print("Não achamos a peca certa "+data.split('^')[1])
+		# 	self.emit(SIGNAL("fail()"))
+		# else:
+		# 	#print("Chegou na função de busca")
+		# 	print(data.split('^')[0])
+		# 	# 1º Caso
+		# 	try:
+		# 		significado = self.dicionario_dict[data.split('^')[0]]
+		# 		if significado:					
+		# 			thread.start_new_thread(devolve, (data.split('^')[1], significado))
+		# 	# 2º Caso
+		# 	except Exception as e:
+		# 		print('Erro de busca')
+		# 		self.emit(SIGNAL("forward(QString)"), data)				
+		# 		return 'Nada foi encontrado'
 
 	def lidaCliente(self, conexao):
 		'''
@@ -77,7 +87,7 @@ class ServerTracker(QThread):
 		while True:
 			data = conexao.recv(1024)
 			if not data: break
-			conexao.send(b'Eco=> ')
+			conexao.send(b"Ok")
 			self.busca(data.decode())
 
 	def despacha(self):

@@ -2,7 +2,7 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 import sys, os, subprocess
 from socket import *
-from tracker_architecture import ServerTracker, ClientTracker
+from tracker_architecture import ServerTracker, ClientTracker,client_without_thread
 from threading import Thread, current_thread
 import random
 from form_dict import AddElem
@@ -10,15 +10,19 @@ import netifaces
 import time, sys
 from timer_tll import TLL
 
+import re
+
+import json
+
 class index(QDialog):
 	def __init__(self, parent=None):
 		super(index, self).__init__(parent)
 
 		
-		self.setWindowTitle("Peer")
+		self.setWindowTitle("Tracker")
 
 		# Selecionando o IP do server
-		self.ip = netifaces.ifaddresses('wlp1s0')[2][0]['addr']
+		self.ip = netifaces.ifaddresses('eth0')[2][0]['addr']
 		self.qPort = QInputDialog.getText(self, 'Informe a porta', 'IP detectado como '+self.ip+'. \nTecle enter para confirmar ou informe o seu IP correto na rede:')
 		print(self.qPort[0])
 		if self.qPort[0] != '':
@@ -26,9 +30,12 @@ class index(QDialog):
 
 		# Inicia-se o servidor do peer como thread e seus possíveis sinais
 		self.server = ServerTracker(self.ip)
-		self.connect(self.server, SIGNAL("success(QString)"), self.success)
-		self.connect(self.server, SIGNAL("fail()"), self.fail)
-		self.connect(self.server, SIGNAL("forward(QString)"), self.forward_search)
+
+		self.setWindowTitle("Tracker: "+ str(self.ip))
+
+		self.connect(self.server, SIGNAL("new_file(QString)"), self.new_file)
+		self.connect(self.server, SIGNAL("clean_participations_from_ip(QString)"), self.clean_participations_from_ip)
+		self.connect(self.server, SIGNAL("seach_files(QString)"), self.seach_files)
 		self.server.start()
 
 
@@ -52,7 +59,7 @@ class index(QDialog):
 		#hbox1.addWidget(self.label_tll)
 
 		# Dicionario de palavras para a GUI
-		self.lista_de_palavras = ['diego.pdf «» 23.6MB «» 2 peers', 'leo.pdf «» 10.6MB «» 1 peers']
+		self.lista_de_palavras = []
 		informedic = QLabel("Arquivos disponíveis:")
 		self.lista = QListWidget()
 
@@ -109,34 +116,49 @@ class index(QDialog):
 		self.connect(self.lista, SIGNAL("itemDoubleClicked(QListWidgetItem *)"), self.clique_arquivo)
 
 		self.connect(button_remove_files, SIGNAL("clicked()"), self.remove_files)
-		self.connect(sobre, SIGNAL("clicked()"), self.about)
 
 		
 		self.setGeometry(300,100,700,430)
 
 	def clique_arquivo(self, item):
-		msg = QMessageBox.information(self, "Item",item.text(), QMessageBox.Close)
+		print_this = '''
+			\nNome do arquivo: {},
+			\nTamanho: {},
+			\nCaminho completo: {},
+			\nNúmero de páginas: {},
+			\nPalavras em cada página: {},
+			\nCriador: {},
+			\nSeeds: {},
+			\nmd5 correspondente: {}.
+		'''.format(self.lista_de_palavras[self.lista.currentRow()]['name'],
+				   str(self.lista_de_palavras[self.lista.currentRow()]['size']),
+				   self.lista_de_palavras[self.lista.currentRow()]['url'],
+				   str(self.lista_de_palavras[self.lista.currentRow()]['num_pages']),
+				   str(self.lista_de_palavras[self.lista.currentRow()]['count_words_by_pages']),
+				   str(self.lista_de_palavras[self.lista.currentRow()]['ip_from']),
+				   str(self.lista_de_palavras[self.lista.currentRow()]['hosts']),
+				   str(self.lista_de_palavras[self.lista.currentRow()]['md5']))
+		msg = QMessageBox.information(self, "Detalhes", print_this, QMessageBox.Close)
 
-	def averiguar(self):
+	def seach_files(self, text):
 		'''
 		Este método faz a procura da palavra nos peers vizinhos
 		'''
-		self.ttll.start()
-		if len(self.lista_de_vizinhos) == 0:
-			self.ttll.terminate()
-			msg = QMessageBox.information(self, "Erro!",
-											"Nao ha nenhum IP vizinho conectado.",
-											 QMessageBox.Close)
+		search = json.loads(text)
+
+		if search['key'] == 'all':
+			json_parametrizado = self.lista_de_palavras
+		elif search['key'] == 'search':
+			lista = list(filter(lambda x: re.search(search['term'], x['name'], re.IGNORECASE), self.lista_de_palavras))
+			json_parametrizado = lista
 		else:
-			try:
-				print(self.lista_de_vizinhos)
-				sorteado = random.choice(self.lista_de_vizinhos)
-				print("A rota a seguir eh: {}".format(sorteado))
-				self.client = ClientTracker(self.nome_lineEdit.displayText(), self.ip, sorteado)
-				self.client.start()
-			except Exception as e:
-				self.client = ClientTracker(self.nome_lineEdit.displayText(), self.ip, '')
-				self.client.start()
+			json_parametrizado = self.lista_de_palavras
+
+		json_final = {'protocol': 'reload_list',
+					  'data':json_parametrizado}
+
+		self.client = client_without_thread(search['ip_from'], json.dumps(json_final))
+		
 
 	def add_viz(self):
 		'''
@@ -159,32 +181,45 @@ class index(QDialog):
 		self.lista_de_vizinhos.clear()
 		self.inforvizinhos.setText("Vizinhos proximos: " + str(self.lista_de_vizinhos))
 
-	def success(self, significado):
-		'''
-		Resposta do sinal para quando algum peer envia o significado para palavra procurada
-		por este peer.
-		'''
-		self.tll = 5
-		self.label_tll.setText("TTL: "+str(self.tll))
-		msg = QMessageBox.information(self, "Sucesso!",
-											"Significado da palavra encontrado: "+significado,
-											 QMessageBox.Close)
-	def fail(self):
-		'''
-		Resposta do sinal para quando algum peer envia a falha ao encontrar palavra procurada
-		por este peer.
-		'''
-		self.tll = 5
-		self.label_tll.setText("TTL: "+str(self.tll))
-		msg = QMessageBox.information(self, "Falha!",
-											"Falha ao encontar significado da palavra:",
-											 QMessageBox.Close)
+	def new_file(self, text):
+
+		file = json.loads(text)
+		file['hosts'] = [file['ip_from'],]
+		file.pop('protocol', None)
+
+		self.lista_de_palavras.append(file)
+
+		item = QListWidgetItem(str("Nome: " + file['name'] + " «» Tamanho: " + str(file['size']) + " «» Numero de páginas: " + str(file['num_pages']) + " «» md5: " + str(file['md5'])))
+		
+		self.itens.append('teste')
+
+		self.lista.addItem(item)
+
+	def clean_participations_from_ip(self, text):
+		file = json.loads(text)
+		for item in self.lista_de_palavras:
+			if len(item['hosts']) == 1 and item['hosts'][0] == file['ip_from']:
+				self.lista_de_palavras.remove(item)
+
+			elif item['ip_from'] == file['ip_from'] and len(item['hosts']) > 1:
+				item['ip_from'] = ''
+				item['hosts'].remove(file['ip_from'])
+			else:
+				for ip in item['hosts']:
+					if ip == file['ip_from']:
+						item['hosts'].remove(ip)
+
+		self.reload_list()
+
+	def reload_list(self):
+		self.lista.clear()
+
+		for file in self.lista_de_palavras:
+			i_to_str = str("Nome: " + file['name'] + " «» Tamanho: " + str(file['size']) + " «» Numero de páginas: " + str(file['num_pages']) + " «» md5: " + str(file['md5']))
+			item = QListWidgetItem(i_to_str)
+			self.lista.addItem(item)
 
 	def remove_files(self):
-		'''
-		Este método adiciona palavras para no dicionário deste peer tanto na GUI quanto no server.
-		'''
-
 		self.lista_de_palavras.clear()
 		self.lista.clear()
 
@@ -250,8 +285,6 @@ class index(QDialog):
 											 'Página do desenvolvedor')
 		self.open_link()
 
-	def open_link(self):
-		QDesktopServices.openUrl(QUrl('https://github.com/diegofsousa'))
 
 			
 
