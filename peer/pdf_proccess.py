@@ -21,7 +21,7 @@ def pdf_splitter(ip, path, num_pages, md5):
 
 		#print(extract_text(pdf.getPage(page)))
 
-		pdf_writer.addPage(pdf.getPage(page))
+		pdf_writer.addPage(pdf.getPage(page-1))
  
 		output_filename = 'temp/{}_page_{}.pdf'.format(
 			md5, page+1)
