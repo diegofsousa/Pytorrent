@@ -10,7 +10,7 @@ import netifaces
 import time, sys
 from timer_tll import TLL
 
-from pdf_proccess import get_info
+from pdf_proccess import get_info, pages
 import json
 
 class index(QDialog):
@@ -294,30 +294,39 @@ class index(QDialog):
 		valid_hosts = []
 
 		for ip in item['hosts']:
+			self.info_logs += "\n"+ip+"... "
 			try:
 				nmap = subprocess.check_output(["nmap","-p","5000", ip]).decode()
 				status = nmap.split(" ")[24]
 				if status != 'open':
+					self.info_logs += "Erro!"
 					hosts.append([ip, None, None])
 				else:
 					latency = nmap.split("(")[2].split("s")[0]
+					self.info_logs += "Ok! " + " - latência: "+ latency 
 					hosts.append([ip, status, float(latency)])
 			except Exception as e:
 				pass
 
 		for host in hosts:
 			if host[1] == None:
-				self.info_logs += "\n"+host[0]+"... inacessível"
+				pass
+				#self.info_logs += "\n"+host[0]+"... inacessível"
 			else:
 				valid_hosts.append(host)
-				self.info_logs += "\n"+host[0]+"... " + host[1] + " " + str(host[2])
+				#self.info_logs += "\n"+host[0]+"... " + host[1] + " " + str(host[2])
 
 		valid_hosts.sort(key = sortSecond)
-
-		 
-
-
-
+		if len(valid_hosts) != 0:
+			pages_req = pages(item['num_pages'], valid_hosts)
+			for request in pages_req:
+				dump_json = json.dumps({'protocol':'download','ip_from': self.ip, 'md5': item['md5'], 'pages': request[1]})
+				#print(request[0])
+				print(dump_json)
+				client = ClientPeer(request[0][0], dump_json)
+				client.start()
+		else:
+			msg = QMessageBox.information(self, "Aviso","Nenhum host esta disponível no momento!", QMessageBox.Close)
 
 		self.reload_text_logs()
 
