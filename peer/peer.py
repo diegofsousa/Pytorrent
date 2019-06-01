@@ -21,7 +21,7 @@ class index(QDialog):
 		self.setWindowTitle("Peer")
 
 		# Selecionando o IP do server
-		self.ip = netifaces.ifaddresses('wlp1s0')[2][0]['addr']
+		self.ip = netifaces.ifaddresses('eth0')[2][0]['addr']
 		self.qPort = QInputDialog.getText(self, 'Informe a porta', 'IP detectado como '+self.ip+'. \nTecle enter para confirmar ou informe o seu IP correto na rede:')
 		print(self.qPort[0])
 		if self.qPort[0] != '':
@@ -352,8 +352,8 @@ class index(QDialog):
 
 		if final_file != None:
 			path_file = pdf_splitter(self.ip, final_file["url"], data["pages"], final_file["md5"])
-			client_file = ClientFilePeer(self.ip, path_file, path_file.split("/")[1])
-			client_file.start()
+			self.client_file = ClientFilePeer(data['ip_from'], path_file, path_file.split("/")[1])
+			self.client_file.start()
 
 
 	def reload_text_logs(self):

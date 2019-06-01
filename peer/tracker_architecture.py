@@ -262,6 +262,8 @@ class ClientFilePeer(QThread):
 
 		serverHost = self.ipsearch
 
+		print("devolvendo arquivo")
+
 		sockobj = socket(AF_INET, SOCK_STREAM)
 		sockobj.connect((serverHost, 5500))
 		wordok = self.file
@@ -271,11 +273,7 @@ class ClientFilePeer(QThread):
 		sockobj.send(self.name_file.encode('utf-8'))
 
 		with open(self.file,'rb') as f:
-			s.sendall(f.read())
-
-
-		data = sockobj.recv(1024)
-		print("Cliente recebeu: ", data)
+			sockobj.sendall(f.read())
 
 		file_open.close()
 		sockobj.close()
@@ -314,13 +312,14 @@ class ServerFilePeer(QThread):
 			if not name_file: break
 
 			f = open('temp/'+name_file,'wb')      #open that file or create one
-			l = c.recv(1024)         #get input
+			l = c.recv(5000)         #get input
 			while (l):
 				f.write(l)            #save input to file
-				l = c.recv(1024)      #get again until done
+				l = c.recv(5000)      #get again until done
 
 			f.close()
 			conexao.send(b'Eco=> ')
+			conexao.close()
 			self.busca(name_file)
 
 	def despacha(self):
