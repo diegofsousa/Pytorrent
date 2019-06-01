@@ -195,6 +195,8 @@ class ServerPeer(QThread):
 			self.emit(SIGNAL("clean_participations_from_ip(QString)"), data)
 		elif serializer['protocol'] == 'search':
 			self.emit(SIGNAL("seach_files(QString)"), data)
+		elif serializer['protocol'] == 'download':
+			self.emit(SIGNAL("download(QString)"), data)
 
 	def lidaCliente(self, conexao):
 		'''

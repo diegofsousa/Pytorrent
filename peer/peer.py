@@ -37,6 +37,7 @@ class index(QDialog):
 		# Inicia-se o servidor do peer como thread e seus possíveis sinais
 		self.server = ServerPeer(self.ip)
 		self.connect(self.server, SIGNAL("reload_list(QString)"), self.reload_list)
+		self.connect(self.server, SIGNAL("download(QString)"), self.proccess_and_return_pdf_to_request)
 		self.server.start()
 
 		# Initialize tab screen
@@ -329,6 +330,18 @@ class index(QDialog):
 			msg = QMessageBox.information(self, "Aviso","Nenhum host esta disponível no momento!", QMessageBox.Close)
 
 		self.reload_text_logs()
+
+	def proccess_and_return_pdf_to_request(self, text):
+		data = json.loads(text)
+
+		final_file = None
+
+		for file in self.lista_de_meus_arquivos:
+			if data['md5'] == file['md5']:
+				final_file = file
+
+		print("Arqivo a ser baixado")
+		print(final_file)
 
 
 	def reload_text_logs(self):
