@@ -41,5 +41,5 @@ def pages(num_pages, peers):
 	return pages_by_hosts
 
 
-p = pages(15, ['a', 'b', 'c'])
+p = pages(20, ['a', 'b', 'c'])
 print(p)

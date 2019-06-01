@@ -10,7 +10,7 @@ import netifaces
 import time, sys
 from timer_tll import TLL
 
-from pdf_proccess import get_info, pages
+from pdf_proccess import get_info, pages, pdf_splitter
 import json
 
 class index(QDialog):
@@ -340,8 +340,8 @@ class index(QDialog):
 			if data['md5'] == file['md5']:
 				final_file = file
 
-		print("Arqivo a ser baixado")
-		print(final_file)
+		if final_file != None:
+			pdf_splitter(final_file["url"], data["pages"], final_file["md5"])
 
 
 	def reload_text_logs(self):

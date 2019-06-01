@@ -9,35 +9,43 @@ import re
 
 import hashlib
 
-def pdf_splitter(path):
+def pdf_splitter(path, num_pages, md5):
 	fname = os.path.splitext(os.path.basename(path))[0]
  
 	pdf = PdfFileReader(path)
-	for page in range(pdf.getNumPages()):
+
+	paths_str = []
+
+	for page in num_pages:
 		pdf_writer = PdfFileWriter()
 
 		#print(extract_text(pdf.getPage(page)))
 
 		pdf_writer.addPage(pdf.getPage(page))
  
-		output_filename = '{}_page_{}.pdf'.format(
-			fname, page+1)
+		output_filename = 'temp/{}_page_{}.pdf'.format(
+			md5, page+1)
+
+		paths_str.append(output_filename)
  
 		with open(output_filename, 'wb') as out:
 			pdf_writer.write(out)
- 
-		print('Created: {}'.format(output_filename))
+
+	merger(paths_str)
+	return 'temp/new_merge.pdf'
 
 
-def merger(output_path, input_paths):
+def merger(input_paths):
 	pdf_merger = PdfFileMerger()
 	file_handles = []
  
 	for path in input_paths:
 		pdf_merger.append(path)
  
-	with open(output_path, 'wb') as fileobj:
+	with open('temp/new_merge.pdf', 'wb') as fileobj:
 		pdf_merger.write(fileobj)
+
+
 
 
 def info_run_pages(path):
@@ -70,15 +78,16 @@ def get_info(path):
 
 	return {'name':name, 'url':url, 'size':size, 'num_pages':num_pages, 'count_words_by_pages':count_words_by_pages, 'md5': md5.hexdigest()}
 
-# if __name__ == '__main__':
-# 	path = '/home/diego/hd/Documentos/Sistemas de Informação/7º Período/TCC I/Proposta III/O bendito/PropostaIII.pdf'
-# 	pdf = PdfFileReader(path)
-# 	#print(pdf.getPage(1).extractText())
-# 	print(get_info(path))
+if __name__ == '__main__':
+	path = '/home/diego/hd/Documentos/Sistemas de Informação/7º Período/TCC I/Proposta III/O bendito/PropostaIII.pdf'
+	pdf_splitter(path, [3,4,5], '983873bdgb22bu28')
+	#pdf = PdfFileReader(path)
+	#print(pdf.getPage(1).extractText())
+	#print(get_info(path))
 
-# 	#paths = glob.glob('Plano de Ensino Sistemas de Informação II_*.pdf')
-# 	#paths.sort()
-# 	#merger('pdf_merger2.pdf', paths)
+	#paths = glob.glob('Plano de Ensino Sistemas de Informação II_*.pdf')
+	#paths.sort()
+	#merger('pdf_merger2.pdf', paths)
 
 def fat_per(x):
 	a = 100/x
