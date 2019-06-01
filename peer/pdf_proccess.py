@@ -9,7 +9,7 @@ import re
 
 import hashlib
 
-def pdf_splitter(path, num_pages, md5):
+def pdf_splitter(ip, path, num_pages, md5):
 	fname = os.path.splitext(os.path.basename(path))[0]
  
 	pdf = PdfFileReader(path)
@@ -31,19 +31,19 @@ def pdf_splitter(path, num_pages, md5):
 		with open(output_filename, 'wb') as out:
 			pdf_writer.write(out)
 
-	merger(paths_str)
-	return 'temp/new_merge.pdf'
+	return merger(paths_str, md5, ip)
 
 
-def merger(input_paths):
+def merger(input_paths, md5, ip):
 	pdf_merger = PdfFileMerger()
 	file_handles = []
  
 	for path in input_paths:
 		pdf_merger.append(path)
  
-	with open('temp/new_merge.pdf', 'wb') as fileobj:
+	with open('temp/{}_{}.pdf'.format(md5, ip), 'wb') as fileobj:
 		pdf_merger.write(fileobj)
+	return 'temp/{}_{}.pdf'.format(md5, ip)
 
 
 

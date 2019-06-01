@@ -346,7 +346,7 @@ class index(QDialog):
 				final_file = file
 
 		if final_file != None:
-			pdf_splitter(final_file["url"], data["pages"], final_file["md5"])
+			path_file = pdf_splitter(self.ip, final_file["url"], data["pages"], final_file["md5"])
 
 
 	def reload_text_logs(self):
