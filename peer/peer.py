@@ -2,7 +2,7 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 import sys, os, subprocess
 from socket import *
-from tracker_architecture import ClientPeer, ServerPeer, client_without_thread
+from tracker_architecture import ClientPeer, ServerPeer, client_without_thread, ClientFilePeer, ServerFilePeer
 from threading import Thread, current_thread
 import random
 from form_dict import AddElem
@@ -39,6 +39,11 @@ class index(QDialog):
 		self.connect(self.server, SIGNAL("reload_list(QString)"), self.reload_list)
 		self.connect(self.server, SIGNAL("download(QString)"), self.proccess_and_return_pdf_to_request)
 		self.server.start()
+
+		self.server_file = ServerFilePeer(self.ip)
+		#self.connect(self.server, SIGNAL("reload_list(QString)"), self.reload_list)
+		#self.connect(self.server, SIGNAL("download(QString)"), self.proccess_and_return_pdf_to_request)
+		self.server_file.start()
 
 		# Initialize tab screen
 		tabs = QTabWidget()
@@ -347,6 +352,8 @@ class index(QDialog):
 
 		if final_file != None:
 			path_file = pdf_splitter(self.ip, final_file["url"], data["pages"], final_file["md5"])
+			client_file = ClientFilePeer(self.ip, path_file, path_file.split("/")[1])
+			client_file.start()
 
 
 	def reload_text_logs(self):

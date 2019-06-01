@@ -251,6 +251,88 @@ class ClientPeer(QThread):
 
 		sockobj.close()
 
+class ClientFilePeer(QThread):
+	def __init__ (self, ipsearch, file, name_file):
+		self.file = file
+		self.name_file = name_file
+		self.ipsearch = ipsearch
+		QThread.__init__(self)
+
+	def run(self):
+
+		serverHost = self.ipsearch
+
+		sockobj = socket(AF_INET, SOCK_STREAM)
+		sockobj.connect((serverHost, 5500))
+		wordok = self.file
+
+		file_open = open(self.file, "rb")
+
+		sockobj.send(self.name_file.encode('utf-8'))
+
+		with open(self.file,'rb') as f:
+			s.sendall(f.read())
+
+
+		data = sockobj.recv(1024)
+		print("Cliente recebeu: ", data)
+
+		file_open.close()
+		sockobj.close()
+
+
+class ServerFilePeer(QThread):
+	def __init__ (self, meuHost):
+		self.meuHost = meuHost
+		QThread.__init__(self)
+
+	def run(self):
+		'''
+		Configurações iniciais do servidor. Ele é uma thread por que deve funcionar sempre em background
+		enquando o Cliente deste mesmo peer irá funcionar eventualmente.
+		'''
+
+		self.sockobj = socket(AF_INET, SOCK_STREAM)
+		self.sockobj.bind((self.meuHost, 5500))
+		self.sockobj.listen(5)
+		#print("Run, barry, run on: IP " + self.meuHost + " - Porta: " + str(5000))
+		self.despacha()
+
+
+
+	def busca(self, data):
+		print(data)
+
+
+	def lidaCliente(self, conexao):
+		'''
+		Este método é responsável por encaminhar os pedidos do cliente para as funções decodoficando
+		suas mensagens
+		'''
+		while True:
+			name_file = conexao.recv(1024)
+			if not name_file: break
+
+			f = open('temp/'+name_file,'wb')      #open that file or create one
+			l = c.recv(1024)         #get input
+			while (l):
+				f.write(l)            #save input to file
+				l = c.recv(1024)      #get again until done
+
+			f.close()
+			conexao.send(b'Eco=> ')
+			self.busca(name_file)
+
+	def despacha(self):
+		'''
+		Este método recebe as requisições dos clientes e os encaminham cada um para uma nova thread
+		'''
+		while True:
+			conexao, endereco = self.sockobj.accept()
+			print('Server foi requisitado ', endereco)
+			thread.start_new_thread(self.lidaCliente, (conexao,))
+		
+
 def client_without_thread(ipsearch, text):
 	try:
 		serverHost = ipsearch
