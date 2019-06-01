@@ -320,6 +320,11 @@ class index(QDialog):
 		valid_hosts.sort(key = sortSecond)
 		if len(valid_hosts) != 0:
 			pages_req = pages(item['num_pages'], valid_hosts)
+
+			self.info_logs += "\n\nRanking de hosts:"
+			for request in pages_req:
+				self.info_logs += "\n"+request[0][0]+" - Páginas: " + str(request[1])
+
 			for request in pages_req:
 				dump_json = json.dumps({'protocol':'download','ip_from': self.ip, 'md5': item['md5'], 'pages': request[1]})
 				#print(request[0])
