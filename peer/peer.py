@@ -21,7 +21,7 @@ class index(QDialog):
 		self.setWindowTitle("Peer")
 
 		# Selecionando o IP do server
-		self.ip = netifaces.ifaddresses('eth0')[2][0]['addr']
+		self.ip = netifaces.ifaddresses('wlp1s0')[2][0]['addr']
 		self.qPort = QInputDialog.getText(self, 'Informe a porta', 'IP detectado como '+self.ip+'. \nTecle enter para confirmar ou informe o seu IP correto na rede:')
 		print(self.qPort[0])
 		if self.qPort[0] != '':

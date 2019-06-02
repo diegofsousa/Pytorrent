@@ -306,16 +306,18 @@ class ServerFilePeer(QThread):
 		'''
 		Este método é responsável por encaminhar os pedidos do cliente para as funções decodoficando
 		suas mensagens
+
+		c, addr = s.accept() 
 		'''
 		while True:
 			name_file = conexao.recv(1024)
 			if not name_file: break
 
-			f = open('temp/'+name_file,'wb')      #open that file or create one
-			l = c.recv(5000)         #get input
+			f = open('tente.pdf','wb')      #open that file or create one
+			l = conexao.recv(1024)         #get input
 			while (l):
 				f.write(l)            #save input to file
-				l = c.recv(5000)      #get again until done
+				l = conexao.recv(1024)      #get again until done
 
 			f.close()
 			conexao.send(b'Eco=> ')
@@ -328,8 +330,12 @@ class ServerFilePeer(QThread):
 		'''
 		while True:
 			conexao, endereco = self.sockobj.accept()
+			l = conexao.recv(1024) 
+			print(l)
+			l = conexao.recv(1024) 
+			print(l)
 			print('Server foi requisitado ', endereco)
-			thread.start_new_thread(self.lidaCliente, (conexao,))
+			#thread.start_new_thread(self.lidaCliente, (conexao,))
 		
 
 def client_without_thread(ipsearch, text):
