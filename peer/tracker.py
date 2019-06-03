@@ -36,6 +36,7 @@ class index(QDialog):
 		self.connect(self.server, SIGNAL("new_file(QString)"), self.new_file)
 		self.connect(self.server, SIGNAL("clean_participations_from_ip(QString)"), self.clean_participations_from_ip)
 		self.connect(self.server, SIGNAL("seach_files(QString)"), self.seach_files)
+		self.connect(self.server, SIGNAL("add_for_new(QString)"), self.add_for_new)
 		self.server.start()
 
 
@@ -194,6 +195,17 @@ class index(QDialog):
 		self.itens.append('teste')
 
 		self.lista.addItem(item)
+
+	def add_for_new(self, text):
+
+		file = json.loads(text)
+		file.pop('protocol', None)
+
+		for it in self.lista_de_palavras:
+			if str(file['md5']) == str(it['md5']):
+				it['hosts'].append(file['ip_from'])
+
+		self.reload_list()
 
 	def clean_participations_from_ip(self, text):
 		file = json.loads(text)

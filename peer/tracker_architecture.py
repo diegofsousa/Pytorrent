@@ -59,6 +59,8 @@ class ServerTracker(QThread):
 			self.emit(SIGNAL("clean_participations_from_ip(QString)"), data)
 		elif serializer['protocol'] == 'search':
 			self.emit(SIGNAL("seach_files(QString)"), data)
+		elif serializer['protocol'] == 'add_for_new':
+			self.emit(SIGNAL("add_for_new(QString)"), data)
 
 		# 3º Caso
 		# if(data.split('^')[0] == 'r'):
