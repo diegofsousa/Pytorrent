@@ -41,7 +41,7 @@ class index(QDialog):
 		self.server.start()
 
 		self.server_file = ServerFilePeer(self.ip)
-		#self.connect(self.server, SIGNAL("reload_list(QString)"), self.reload_list)
+		self.connect(self.server, SIGNAL("already_part(QString)"), self.already_part)
 		#self.connect(self.server, SIGNAL("download(QString)"), self.proccess_and_return_pdf_to_request)
 		self.server_file.start()
 
@@ -182,6 +182,7 @@ class index(QDialog):
 		self.connect(self.post_download, SIGNAL("clicked()"), self.download)
 
 		self.file_name_actual = None
+		self.valid_hosts = []
 
 
 		
@@ -298,8 +299,9 @@ class index(QDialog):
 		self.info_logs +='''\nPreparando download do arquivo "{}"...
 				Revisando seeders...'''.format(item['name'])
 
+		self.file_name_actual = item['name']
 		hosts = []
-		valid_hosts = []
+		self.valid_hosts = []
 
 		for ip in item['hosts']:
 			self.info_logs += "\n"+ip+"... "
@@ -308,11 +310,11 @@ class index(QDialog):
 				status = nmap.split(" ")[24]
 				if status != 'open':
 					self.info_logs += "Erro!"
-					hosts.append([ip, None, None])
+					hosts.append([ip, None, None, None])
 				else:
 					latency = nmap.split("(")[2].split("s")[0]
 					self.info_logs += "Ok! " + " - latência: "+ latency 
-					hosts.append([ip, status, float(latency)])
+					hosts.append([ip, status, float(latency), False])
 			except Exception as e:
 				pass
 
@@ -321,12 +323,12 @@ class index(QDialog):
 				pass
 				#self.info_logs += "\n"+host[0]+"... inacessível"
 			else:
-				valid_hosts.append(host)
+				self.valid_hosts.append(host)
 				#self.info_logs += "\n"+host[0]+"... " + host[1] + " " + str(host[2])
 
-		valid_hosts.sort(key = sortSecond)
-		if len(valid_hosts) != 0:
-			pages_req = pages(item['num_pages'], valid_hosts)
+		self.valid_hosts.sort(key = sortSecond)
+		if len(self.valid_hosts) != 0:
+			pages_req = pages(item['num_pages'], self.valid_hosts)
 
 			self.info_logs += "\n\nRanking de hosts:"
 			for request in pages_req:
@@ -340,6 +342,8 @@ class index(QDialog):
 				client.start()
 		else:
 			msg = QMessageBox.information(self, "Aviso","Nenhum host esta disponível no momento!", QMessageBox.Close)
+
+
 
 		self.reload_text_logs()
 
@@ -357,6 +361,22 @@ class index(QDialog):
 			self.client_file = ClientFilePeer(data['ip_from'], path_file, path_file.split("/")[1])
 			self.client_file.start()
 
+	def already_part(self, text):
+		data = json.loads(text)
+
+		for host in self.valid_hosts:
+			if host[0] == data['part_ip']:
+				host[3] = True
+
+		self.info_logs ='''\nDOWNLOADS:\n'''
+
+		for host in self.valid_hosts:
+			if host[3] == True:
+				self.info_logs += "\n"+host[0]+" - download pronto!"
+			else:
+				self.info_logs += "\n"+host[0]+" - ...!"
+
+		self.reload_text_logs()
 
 	def reload_text_logs(self):
 		self.text_logs.setText(self.info_logs)
