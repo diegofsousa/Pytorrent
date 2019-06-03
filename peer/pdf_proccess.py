@@ -9,35 +9,43 @@ import re
 
 import hashlib
 
-def pdf_splitter(path):
+def pdf_splitter(ip, path, num_pages, md5):
 	fname = os.path.splitext(os.path.basename(path))[0]
  
 	pdf = PdfFileReader(path)
-	for page in range(pdf.getNumPages()):
+
+	paths_str = []
+
+	for page in num_pages:
 		pdf_writer = PdfFileWriter()
 
 		#print(extract_text(pdf.getPage(page)))
 
-		pdf_writer.addPage(pdf.getPage(page))
+		pdf_writer.addPage(pdf.getPage(page-1))
  
-		output_filename = '{}_page_{}.pdf'.format(
-			fname, page+1)
+		output_filename = 'temp/{}_page_{}.pdf'.format(
+			md5, page+1)
+
+		paths_str.append(output_filename)
  
 		with open(output_filename, 'wb') as out:
 			pdf_writer.write(out)
- 
-		print('Created: {}'.format(output_filename))
+
+	return merger(paths_str, md5, ip)
 
 
-def merger(output_path, input_paths):
+def merger(input_paths, md5, ip):
 	pdf_merger = PdfFileMerger()
 	file_handles = []
  
 	for path in input_paths:
 		pdf_merger.append(path)
  
-	with open(output_path, 'wb') as fileobj:
+	with open('temp/{}_{}.pdf'.format(md5, ip), 'wb') as fileobj:
 		pdf_merger.write(fileobj)
+	return 'temp/{}_{}.pdf'.format(md5, ip)
+
+
 
 
 def info_run_pages(path):
@@ -70,13 +78,55 @@ def get_info(path):
 
 	return {'name':name, 'url':url, 'size':size, 'num_pages':num_pages, 'count_words_by_pages':count_words_by_pages, 'md5': md5.hexdigest()}
 
-# if __name__ == '__main__':
-# 	path = '/home/diego/hd/Documentos/Sistemas de Informação/7º Período/TCC I/Proposta III/O bendito/PropostaIII.pdf'
-# 	pdf = PdfFileReader(path)
-# 	#print(pdf.getPage(1).extractText())
-# 	print(get_info(path))
+if __name__ == '__main__':
+	path = '/home/diego/hd/Documentos/Sistemas de Informação/7º Período/TCC I/Proposta III/O bendito/PropostaIII.pdf'
+	pdf_splitter(path, [3,4,5], '983873bdgb22bu28')
+	#pdf = PdfFileReader(path)
+	#print(pdf.getPage(1).extractText())
+	#print(get_info(path))
 
-# 	#paths = glob.glob('Plano de Ensino Sistemas de Informação II_*.pdf')
-# 	#paths.sort()
-# 	#merger('pdf_merger2.pdf', paths)
+	#paths = glob.glob('Plano de Ensino Sistemas de Informação II_*.pdf')
+	#paths.sort()
+	#merger('pdf_merger2.pdf', paths)
 
+def fat_per(x):
+	a = 100/x
+	l = []
+	for i in range(x):
+		l.append(a)
+	for y in range(len(l)-1):
+		l[y] = l[y]/2
+		l[y+1] += l[y]
+		return l
+
+
+def pages(num_pages, peers):
+	aux_peers = peers
+	peers = len(peers)
+
+	if peers == 1:
+		return[[aux_peers[0], [i for i in range(1, num_pages+1)]]]
+
+	percents = fat_per(peers)
+	percents.sort(reverse=True)
+
+	w_peers = []
+
+	for p in percents:
+		a = (p/100) * num_pages
+		w_peers.append(round(a))
+
+	if sum(w_peers) > num_pages:
+		w_peers[0] = w_peers[0] - (sum(w_peers) - num_pages)
+	if sum(w_peers) < num_pages:
+		w_peers[0] = w_peers[0] + (num_pages-sum(w_peers))
+
+	pages_by_hosts = []
+
+	for ip in range(peers):
+		if ip == 0:
+			pages_by_hosts.append([aux_peers[ip], [i for i in range(1, w_peers[ip] + 1)]])
+		else:
+			pages_by_hosts.append([aux_peers[ip], [i for i in range(pages_by_hosts[-1][1][-1]+1, pages_by_hosts[-1][1][-1] + w_peers[ip] + 1)]])
+
+	return pages_by_hosts

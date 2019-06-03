@@ -2,7 +2,7 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 import sys, os, subprocess
 from socket import *
-from tracker_architecture import ClientPeer, ServerPeer, client_without_thread
+from tracker_architecture import ClientPeer, ServerPeer, client_without_thread, ClientFilePeer, ServerFilePeer
 from threading import Thread, current_thread
 import random
 from form_dict import AddElem
@@ -10,7 +10,7 @@ import netifaces
 import time, sys
 from timer_tll import TLL
 
-from pdf_proccess import get_info
+from pdf_proccess import get_info, pages, pdf_splitter
 import json
 
 class index(QDialog):
@@ -37,7 +37,13 @@ class index(QDialog):
 		# Inicia-se o servidor do peer como thread e seus possíveis sinais
 		self.server = ServerPeer(self.ip)
 		self.connect(self.server, SIGNAL("reload_list(QString)"), self.reload_list)
+		self.connect(self.server, SIGNAL("download(QString)"), self.proccess_and_return_pdf_to_request)
 		self.server.start()
+
+		self.server_file = ServerFilePeer(self.ip)
+		#self.connect(self.server, SIGNAL("reload_list(QString)"), self.reload_list)
+		#self.connect(self.server, SIGNAL("download(QString)"), self.proccess_and_return_pdf_to_request)
+		self.server_file.start()
 
 		# Initialize tab screen
 		tabs = QTabWidget()
@@ -175,6 +181,8 @@ class index(QDialog):
 		self.connect(self.post_btn, SIGNAL("clicked()"), self.search_button)
 		self.connect(self.post_download, SIGNAL("clicked()"), self.download)
 
+		self.file_name_actual = None
+
 
 		
 		self.setGeometry(300,100,700,430)
@@ -294,32 +302,60 @@ class index(QDialog):
 		valid_hosts = []
 
 		for ip in item['hosts']:
+			self.info_logs += "\n"+ip+"... "
 			try:
 				nmap = subprocess.check_output(["nmap","-p","5000", ip]).decode()
 				status = nmap.split(" ")[24]
 				if status != 'open':
+					self.info_logs += "Erro!"
 					hosts.append([ip, None, None])
 				else:
 					latency = nmap.split("(")[2].split("s")[0]
+					self.info_logs += "Ok! " + " - latência: "+ latency 
 					hosts.append([ip, status, float(latency)])
 			except Exception as e:
 				pass
 
 		for host in hosts:
 			if host[1] == None:
-				self.info_logs += "\n"+host[0]+"... inacessível"
+				pass
+				#self.info_logs += "\n"+host[0]+"... inacessível"
 			else:
 				valid_hosts.append(host)
-				self.info_logs += "\n"+host[0]+"... " + host[1] + " " + str(host[2])
+				#self.info_logs += "\n"+host[0]+"... " + host[1] + " " + str(host[2])
 
 		valid_hosts.sort(key = sortSecond)
+		if len(valid_hosts) != 0:
+			pages_req = pages(item['num_pages'], valid_hosts)
 
-		 
+			self.info_logs += "\n\nRanking de hosts:"
+			for request in pages_req:
+				self.info_logs += "\n"+request[0][0]+" - Páginas: " + str(request[1])
 
-
-
+			for request in pages_req:
+				dump_json = json.dumps({'protocol':'download','ip_from': self.ip, 'md5': item['md5'], 'pages': request[1]})
+				#print(request[0])
+				print(dump_json)
+				client = ClientPeer(request[0][0], dump_json)
+				client.start()
+		else:
+			msg = QMessageBox.information(self, "Aviso","Nenhum host esta disponível no momento!", QMessageBox.Close)
 
 		self.reload_text_logs()
+
+	def proccess_and_return_pdf_to_request(self, text):
+		data = json.loads(text)
+
+		final_file = None
+
+		for file in self.lista_de_meus_arquivos:
+			if data['md5'] == file['md5']:
+				final_file = file
+
+		if final_file != None:
+			path_file = pdf_splitter(self.ip, final_file["url"], data["pages"], final_file["md5"])
+			self.client_file = ClientFilePeer(data['ip_from'], path_file, path_file.split("/")[1])
+			self.client_file.start()
 
 
 	def reload_text_logs(self):
