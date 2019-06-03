@@ -10,7 +10,7 @@ import netifaces
 import time, sys
 from timer_tll import TLL
 
-from pdf_proccess import get_info, pages, pdf_splitter
+from pdf_proccess import get_info, pages, pdf_splitter, merger, info_run_pages
 import json
 
 class index(QDialog):
@@ -41,7 +41,7 @@ class index(QDialog):
 		self.server.start()
 
 		self.server_file = ServerFilePeer(self.ip)
-		self.connect(self.server, SIGNAL("already_part(QString)"), self.already_part)
+		self.connect(self.server_file, SIGNAL("already_part(QString)"), self.already_part)
 		#self.connect(self.server, SIGNAL("download(QString)"), self.proccess_and_return_pdf_to_request)
 		self.server_file.start()
 
@@ -110,9 +110,23 @@ class index(QDialog):
 		vbox1.addWidget(inforlogs)
 		vbox1.addWidget(self.text_logs)
 
+		inforlogs_d = QLabel("Downloads:")
+
+		self.text_logs_donwloads = QTextEdit()
+		self.text_logs_donwloads.setDisabled(True)
+
+		self.info_logs_donwloads = ''
+
+
+
+		vbox2 = QVBoxLayout()
+		vbox2.addWidget(inforlogs_d)
+		vbox2.addWidget(self.text_logs_donwloads)
+
 		hbox_text = QHBoxLayout()
 		hbox_text.addLayout(vbox)
 		hbox_text.addLayout(vbox1)
+		hbox_text.addLayout(vbox2)
 
 		self.post_download = QPushButton("Fazer download do arquivo selecionado!")
 		
@@ -296,10 +310,9 @@ class index(QDialog):
 		selected = self.lista.currentRow()
 		item = self.lista_de_palavras[selected]
 
-		self.info_logs +='''\nPreparando download do arquivo "{}"...
-				Revisando seeders...'''.format(item['name'])
+		self.info_logs +='''\nPreparando download do arquivo "{}"... Revisando seeders...\n'''.format(item['name'])
 
-		self.file_name_actual = item['name']
+		self.file_name_actual = item
 		hosts = []
 		self.valid_hosts = []
 
@@ -310,11 +323,11 @@ class index(QDialog):
 				status = nmap.split(" ")[24]
 				if status != 'open':
 					self.info_logs += "Erro!"
-					hosts.append([ip, None, None, None])
+					hosts.append([ip, None, None, None, ''])
 				else:
 					latency = nmap.split("(")[2].split("s")[0]
 					self.info_logs += "Ok! " + " - latência: "+ latency 
-					hosts.append([ip, status, float(latency), False])
+					hosts.append([ip, status, float(latency), False, ''])
 			except Exception as e:
 				pass
 
@@ -367,19 +380,54 @@ class index(QDialog):
 		for host in self.valid_hosts:
 			if host[0] == data['part_ip']:
 				host[3] = True
+				host[4] = data['file_path']
 
-		self.info_logs ='''\nDOWNLOADS:\n'''
+		self.info_logs_donwloads +='''DOWNLOADS "{}":\n'''.format(self.file_name_actual['name'])
 
 		for host in self.valid_hosts:
 			if host[3] == True:
-				self.info_logs += "\n"+host[0]+" - download pronto!"
+				self.info_logs_donwloads += "\n"+host[0]+" - download pronto!"
 			else:
-				self.info_logs += "\n"+host[0]+" - ...!"
+				self.info_logs_donwloads += "\n"+host[0]+" - ...!"
 
-		self.reload_text_logs()
+		self.reload_text_logs_downloads()
+
+		ready = True
+		for host in self.valid_hosts:
+			if host[3] == False:
+				ready = False
+
+		if ready == True:
+			paths_ok = []
+			for host in self.valid_hosts:
+				paths_ok.append(host[4])
+
+			path_final = merger(paths_ok, self.file_name_actual['name'])
+			path_info = get_info(path_final)
+			md5_n = path_info['md5']
+			print(md5_n)
+			print(self.file_name_actual['md5'])
+			if md5_n == self.file_name_actual['md5']:
+				msg = QMessageBox.information(self, self.file_name_actual['name'],"O seu download foi concluído!\n\n md5 check: Ok!\n" + md5_n + "\n", QMessageBox.Close)
+				path_info['protocol'] = 'add_for_new'
+				path_info['ip_from'] = self.ip
+				json_prepare = json.dumps(path_info)
+
+				if client_without_thread(self.tracker_ip, json_prepare) == True:
+					self.lista_de_meus_arquivos.append(path_info)
+					#print(self.lista_de_meus_arquivos)
+					self.reload_my_files_by_list()
+					msg = QMessageBox.information(self, "Mensagem","Obrigado por semear!\nConteudo esta disponivel no Tracker.", QMessageBox.Close)
+				else:
+					msg = QMessageBox.information(self, "Aviso","Ocorreu um erro ao adicionar o arquivo ao Tracker!", QMessageBox.Close)
+			else:
+				msg = QMessageBox.information(self, self.file_name_actual['name'],"O seu download foi concluído sem sucesso.\n\n md5 check: Erro!\n", QMessageBox.Close)
 
 	def reload_text_logs(self):
 		self.text_logs.setText(self.info_logs)
+
+	def reload_text_logs_downloads(self):
+		self.text_logs_donwloads.setText(self.info_logs_donwloads)
 
 def sortSecond(val): 
 	return val[2] 
