@@ -22,7 +22,13 @@ class index(QDialog):
 		self.setWindowTitle("Tracker")
 
 		# Selecionando o IP do server
-		self.ip = netifaces.ifaddresses('eth0')[2][0]['addr']
+
+		item, ok = QInputDialog.getItem(self, "Interface de redes", 
+		"Selecione sua interface de rede para iniciar a rede torrent:", netifaces.interfaces(), 0, False)
+
+		# Selecionando o IP do server
+		self.ip = netifaces.ifaddresses(item)[2][0]['addr']
+
 		self.qPort = QInputDialog.getText(self, 'Informe a porta', 'IP detectado como '+self.ip+'. \nTecle enter para confirmar ou informe o seu IP correto na rede:')
 		print(self.qPort[0])
 		if self.qPort[0] != '':

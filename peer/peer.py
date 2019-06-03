@@ -13,6 +13,8 @@ from timer_tll import TLL
 from pdf_proccess import get_info, pages, pdf_splitter, merger, info_run_pages
 import json
 
+import webbrowser
+
 class index(QDialog):
 	def __init__(self, parent=None):
 		super(index, self).__init__(parent)
@@ -20,17 +22,20 @@ class index(QDialog):
 		
 		self.setWindowTitle("Peer")
 
+		item, ok = QInputDialog.getItem(self, "Interface de redes", 
+		"Selecione sua interface de rede para iniciar a rede torrent:", netifaces.interfaces(), 0, False)
+
 		# Selecionando o IP do server
-		self.ip = netifaces.ifaddresses('wlp1s0')[2][0]['addr']
+		self.ip = netifaces.ifaddresses(item)[2][0]['addr']
 		self.qPort = QInputDialog.getText(self, 'Informe a porta', 'IP detectado como '+self.ip+'. \nTecle enter para confirmar ou informe o seu IP correto na rede:')
 		print(self.qPort[0])
 		if self.qPort[0] != '':
 			self.ip = self.qPort[0]
 
-		self.tracker_ip_dialog = QInputDialog.getText(self, 'Informe o host do Tracker', 'Tecle enter para confirmar:')
+		self.tracker_ip_dialog = QInputDialog.getText(self, 'Informe o host do Tracker', 'Obs.: o servidor tracker deve ser iniciado primeiro.')
 		print(self.tracker_ip_dialog[0])
 		while self.tracker_ip_dialog[0] == '':
-			self.tracker_ip_dialog = QInputDialog.getText(self, 'Informe o host do Tracker', 'Tecle enter para confirmar:')
+			self.tracker_ip_dialog = QInputDialog.getText(self, 'Informe o host do Tracker', 'Obs.: o servidor tracker deve ser iniciado primeiro.')
 		
 		self.tracker_ip = self.tracker_ip_dialog[0]
 
@@ -162,12 +167,17 @@ class index(QDialog):
 			item = QListWidgetItem(i)
 			self.lista_meus_aquivos.addItem(item)
 
+		self.open_file = QPushButton("Abrir arquivo")
 		self.btn_clean_all = QPushButton("Limpar tudo")
+
+		hbox_button = QHBoxLayout()
+		hbox_button.addWidget(self.open_file)
+		hbox_button.addWidget(self.btn_clean_all)
 
 		vbox3 = QVBoxLayout()
 		vbox3.addWidget(inform_files)
 		vbox3.addWidget(self.lista_meus_aquivos)
-		vbox3.addWidget(self.btn_clean_all)
+		vbox3.addLayout(hbox_button)
 
 
 		tab2 = QWidget()
@@ -191,6 +201,7 @@ class index(QDialog):
 
 		self.setLayout(vbox1)
 
+		self.connect(self.open_file, SIGNAL("clicked()"), self.open_file_fn)
 		self.connect(self.btn_clean_all, SIGNAL("clicked()"), self.my_files_clean)
 		self.connect(self.post_btn, SIGNAL("clicked()"), self.search_button)
 		self.connect(self.post_download, SIGNAL("clicked()"), self.download)
@@ -286,12 +297,12 @@ class index(QDialog):
 
 		json_prepare = json.dumps(json_prepare)
 
-		if client_without_thread(self.tracker_ip, json_prepare) == True:
-			self.lista_de_meus_arquivos.clear()
+		if client_without_thread(self.tracker_ip, json_prepare) != True:
+			#self.lista_de_meus_arquivos.clear()
 			#print(self.lista_de_meus_arquivos)
 			#self.reload_my_files_by_list()
 			#msg = QMessageBox.information(self, "Mensagem","Suas participacoes foram removidas do Tracker com sucesso!", QMessageBox.Close)
-		else:
+		
 			msg = QMessageBox.information(self, "Aviso","Ocorreu um erro ao fazer este processamento!", QMessageBox.Close)
 
 	def reload_list(self, text):
@@ -306,9 +317,19 @@ class index(QDialog):
 
 	import subprocess
 
+	def open_file_fn(self):
+		selected = self.lista_meus_aquivos.currentRow()
+		item = self.lista_de_meus_arquivos[selected]
+		webbrowser.open(item['url'])
+
 	def download(self):
 		selected = self.lista.currentRow()
 		item = self.lista_de_palavras[selected]
+
+		for iaux in self.lista_de_meus_arquivos:
+			if iaux['md5'] == item['md5']:
+				msg = QMessageBox.information(self, "Aviso","Este arquivo já existe na sua lista!", QMessageBox.Close)
+				return 0
 
 		self.info_logs +='''\nPreparando download do arquivo "{}"... Revisando seeders...\n'''.format(item['name'])
 
@@ -317,24 +338,28 @@ class index(QDialog):
 		self.valid_hosts = []
 
 		for ip in item['hosts']:
-			self.info_logs += "\n"+ip+"... "
-			try:
-				nmap = subprocess.check_output(["nmap","-p","5000", ip]).decode()
-				status = nmap.split(" ")[24]
-				if status != 'open':
-					self.info_logs += "Erro!"
-					hosts.append([ip, None, None, None, ''])
-				else:
-					latency = nmap.split("(")[2].split("s")[0]
-					self.info_logs += "Ok! " + " - latência: "+ latency 
-					hosts.append([ip, status, float(latency), False, ''])
-			except Exception as e:
-				pass
+			if ip != self.ip:
+				self.info_logs += "\n"+ip+"... "
+				try:
+					nmap = subprocess.check_output(["nmap","-p","5000", ip]).decode()
+					status = nmap.split(" ")[24]
+					if status != 'open':
+						self.info_logs += "Erro!"
+						hosts.append([ip, None, None, None, ''])
+					else:
+						latency = nmap.split("(")[2].split("s")[0]
+						self.info_logs += "Ok! " + " - latência: "+ latency 
+						hosts.append([ip, status, float(latency), False, ''])
+				except Exception as e:
+					pass
 
 		for host in hosts:
-			if host[1] == None or host[1] == self.ip:
+			if host[1] == None:
 				pass
 				#self.info_logs += "\n"+host[0]+"... inacessível"
+			elif host[1] == self.ip:
+				print("esse host eh meu")
+				pass
 			else:
 				self.valid_hosts.append(host)
 				#self.info_logs += "\n"+host[0]+"... " + host[1] + " " + str(host[2])
@@ -347,12 +372,15 @@ class index(QDialog):
 			for request in pages_req:
 				self.info_logs += "\n"+request[0][0]+" - Páginas: " + str(request[1])
 
+			self.thr_req = []
+
 			for request in pages_req:
 				dump_json = json.dumps({'protocol':'download','ip_from': self.ip, 'md5': item['md5'], 'pages': request[1]})
 				#print(request[0])
 				print(dump_json)
-				client = ClientPeer(request[0][0], dump_json)
-				client.start()
+				self.thr_req.append(ClientPeer(request[0][0], dump_json))
+			for th in self.thr_req:
+				th.start()
 		else:
 			msg = QMessageBox.information(self, "Aviso","Nenhum host esta disponível no momento!", QMessageBox.Close)
 
@@ -382,7 +410,7 @@ class index(QDialog):
 				host[3] = True
 				host[4] = data['file_path']
 
-		self.info_logs_donwloads +='''DOWNLOADS "{}":\n'''.format(self.file_name_actual['name'])
+		self.info_logs_donwloads ='''DOWNLOADS "{}":\n'''.format(self.file_name_actual['name'])
 
 		for host in self.valid_hosts:
 			if host[3] == True:
