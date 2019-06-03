@@ -31,7 +31,19 @@ def pdf_splitter(ip, path, num_pages, md5):
 		with open(output_filename, 'wb') as out:
 			pdf_writer.write(out)
 
-	return merger(paths_str, md5, ip)
+	return merger_split(paths_str, md5, ip)
+
+
+def merger_split(input_paths, md5, ip):
+	pdf_merger = PdfFileMerger()
+	file_handles = []
+
+	for path in input_paths:
+		pdf_merger.append(path)
+
+	with open('temp/{}_{}.pdf'.format(md5, ip), 'wb') as fileobj:
+		pdf_merger.write(fileobj)
+	return 'temp/{}_{}.pdf'.format(md5, ip)
 
 
 def merger(input_paths, name_file):

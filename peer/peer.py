@@ -332,7 +332,7 @@ class index(QDialog):
 				pass
 
 		for host in hosts:
-			if host[1] == None:
+			if host[1] == None or host[1] == self.ip:
 				pass
 				#self.info_logs += "\n"+host[0]+"... inacessível"
 			else:
