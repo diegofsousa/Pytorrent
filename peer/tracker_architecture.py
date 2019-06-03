@@ -4,6 +4,7 @@ from socket import *
 import time, _thread as thread
 
 import json
+import random
 
 FILE_PARTS_PATH = "temp/.file_parts/"
 
@@ -328,18 +329,31 @@ class ServerFilePeer(QThread):
 		while True:
 			c, addr = self.sockobj.accept()     
 
-			#file = c.recv(1024)     #get file name first from client
+			#parâmetros que preciso levar
 
-			#print(file)
-			#opening file first
+			#ip da parte do arquivo de origem, caminho do arquivo com hash, 
 
-			f = open(FILE_PARTS_PATH + addr+'_temp.pdf','wb')      #open that file or create one
+			print(addr)
+
+			hashr = random.getrandbits(12)
+
+			file_path = FILE_PARTS_PATH + addr[0]+'_'+ str(hashr) +'_temp.pdf'
+
+			f = open(file_name,'wb')      #open that file or create one
 			l = c.recv(1024)         #get input	
 			while (l):
 				f.write(l)            #save input to file
 				l = c.recv(1024)      #get again until done
 
 			f.close()
+
+			context = {'part_ip':addr[0],
+					   'file_path':file_path}
+
+			json_con = json.dumps(context)
+			self.emit(SIGNAL("already_part(QString)"), context)
+
+
 
 def client_without_thread(ipsearch, text):
 	try:
