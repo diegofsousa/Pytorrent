@@ -5,6 +5,8 @@ import time, _thread as thread
 
 import json
 
+FILE_PARTS_PATH = "temp/.file_parts/"
+
 class ServerTracker(QThread):
 	def __init__ (self, meuHost):
 		self.meuHost = meuHost
@@ -270,7 +272,7 @@ class ClientFilePeer(QThread):
 
 		file_open = open(self.file, "rb")
 
-		sockobj.send(self.name_file.encode('utf-8'))
+		#sockobj.send(self.name_file.encode('utf-8'))
 
 		with open(self.file,'rb') as f:
 			sockobj.sendall(f.read())
@@ -309,34 +311,35 @@ class ServerFilePeer(QThread):
 
 		c, addr = s.accept() 
 		'''
-		while True:
-			name_file = conexao.recv(1024)
-			if not name_file: break
+		file = conexao.recv(1024)     #get file name first from client
 
-			f = open('tente.pdf','wb')      #open that file or create one
-			l = conexao.recv(1024)         #get input
-			while (l):
-				f.write(l)            #save input to file
-				l = conexao.recv(1024)      #get again until done
+		f = open(FILE_PARTS_PATH + file,'wb')      #open that file or create one
+		l = c.recv(1024)         #get input
+		while (l):
+			f.write(l)            #save input to file
+			l = c.recv(1024)      #get again until done
 
-			f.close()
-			conexao.send(b'Eco=> ')
-			conexao.close()
-			self.busca(name_file)
+		f.close()
 
 	def despacha(self):
 		'''
 		Este método recebe as requisições dos clientes e os encaminham cada um para uma nova thread
 		'''
 		while True:
-			conexao, endereco = self.sockobj.accept()
-			l = conexao.recv(1024) 
-			print(l)
-			l = conexao.recv(1024) 
-			print(l)
-			print('Server foi requisitado ', endereco)
-			#thread.start_new_thread(self.lidaCliente, (conexao,))
-		
+			c, addr = self.sockobj.accept()     
+
+			#file = c.recv(1024)     #get file name first from client
+
+			#print(file)
+			#opening file first
+
+			f = open(FILE_PARTS_PATH + addr+'_temp.pdf','wb')      #open that file or create one
+			l = c.recv(1024)         #get input	
+			while (l):
+				f.write(l)            #save input to file
+				l = c.recv(1024)      #get again until done
+
+			f.close()
 
 def client_without_thread(ipsearch, text):
 	try:

@@ -181,6 +181,8 @@ class index(QDialog):
 		self.connect(self.post_btn, SIGNAL("clicked()"), self.search_button)
 		self.connect(self.post_download, SIGNAL("clicked()"), self.download)
 
+		self.file_name_actual = None
+
 
 		
 		self.setGeometry(300,100,700,430)
