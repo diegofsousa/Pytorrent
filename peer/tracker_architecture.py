@@ -339,7 +339,7 @@ class ServerFilePeer(QThread):
 
 			file_path = FILE_PARTS_PATH + addr[0]+'_'+ str(hashr) +'_temp.pdf'
 
-			f = open(file_name,'wb')      #open that file or create one
+			f = open(file_path,'wb')      #open that file or create one
 			l = c.recv(1024)         #get input	
 			while (l):
 				f.write(l)            #save input to file
@@ -351,7 +351,7 @@ class ServerFilePeer(QThread):
 					   'file_path':file_path}
 
 			json_con = json.dumps(context)
-			self.emit(SIGNAL("already_part(QString)"), context)
+			self.emit(SIGNAL("already_part(QString)"), json_con)
 
 
 

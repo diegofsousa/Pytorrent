@@ -34,16 +34,16 @@ def pdf_splitter(ip, path, num_pages, md5):
 	return merger(paths_str, md5, ip)
 
 
-def merger(input_paths, md5, ip):
+def merger(input_paths, name_file):
 	pdf_merger = PdfFileMerger()
 	file_handles = []
  
 	for path in input_paths:
 		pdf_merger.append(path)
  
-	with open('temp/{}_{}.pdf'.format(md5, ip), 'wb') as fileobj:
+	with open('files/{}'.format(name_file), 'wb') as fileobj:
 		pdf_merger.write(fileobj)
-	return 'temp/{}_{}.pdf'.format(md5, ip)
+	return 'files/{}'.format(name_file)
 
 
 
