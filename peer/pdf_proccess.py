@@ -90,16 +90,6 @@ def get_info(path):
 
 	return {'name':name, 'url':url, 'size':size, 'num_pages':num_pages, 'count_words_by_pages':count_words_by_pages, 'md5': md5.hexdigest()}
 
-if __name__ == '__main__':
-	path = '/home/diego/hd/Documentos/Sistemas de Informação/7º Período/TCC I/Proposta III/O bendito/PropostaIII.pdf'
-	pdf_splitter(path, [3,4,5], '983873bdgb22bu28')
-	#pdf = PdfFileReader(path)
-	#print(pdf.getPage(1).extractText())
-	#print(get_info(path))
-
-	#paths = glob.glob('Plano de Ensino Sistemas de Informação II_*.pdf')
-	#paths.sort()
-	#merger('pdf_merger2.pdf', paths)
 
 def fat_per(x):
 	a = 100/x

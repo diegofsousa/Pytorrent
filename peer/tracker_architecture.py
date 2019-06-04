@@ -33,22 +33,7 @@ class ServerTracker(QThread):
 
 
 	def busca(self, data):
-		'''
-		Este método é responsável por tratar as requisições.
-		Existem 4 casos:
-		1º Caso: O cliente procura uma palavra no servidor que deste método. Se a palavra existir,
-		este método enviará a resposta para a thread contida em "response.py" encaminha-la ao IP
-		que procurou o significado da palavra.
-		2º Caso: Se o cliente procurar a palavra e ela não existir no dicionário do servidor deste método,
-		este se encarregará de emitir um sinal para a view (views.py) para que este peer redirecione a busca
-		para outro peer.
-		3º Caso: Daqui em diante, ficam as requisicões originadas de response, que é quando há uma resposta
-		plausível para o cliente que procurou pela palavra. Estes casos sempre são executados no peer que 
-		requisitou pela palavra. Quando a palavra vem acompanhada pelo 'r' no início, significa que algum peer
-		enviou o significado palavra via "response.py". Apenas emitiremos um sinal para a view com a string.
-		4º Caso: Quando o últmo peer visitado não tem ramificações, ele volta o erro via "response.py" para
-		o peer que requisitou a palavra.
-		'''
+
 
 		print(data)
 		serializer = json.loads(data)
@@ -62,27 +47,6 @@ class ServerTracker(QThread):
 		elif serializer['protocol'] == 'add_for_new':
 			self.emit(SIGNAL("add_for_new(QString)"), data)
 
-		# 3º Caso
-		# if(data.split('^')[0] == 'r'):
-		# 	#print("Achou a palavra: "+data.split('^')[1])
-		# 	self.emit(SIGNAL("success(QString)"), data.split('^')[1])
-		# # 4º Caso
-		# elif(data.split('^')[0] == 'e'):
-		# 	#print("Não achamos a peca certa "+data.split('^')[1])
-		# 	self.emit(SIGNAL("fail()"))
-		# else:
-		# 	#print("Chegou na função de busca")
-		# 	print(data.split('^')[0])
-		# 	# 1º Caso
-		# 	try:
-		# 		significado = self.dicionario_dict[data.split('^')[0]]
-		# 		if significado:					
-		# 			thread.start_new_thread(devolve, (data.split('^')[1], significado))
-		# 	# 2º Caso
-		# 	except Exception as e:
-		# 		print('Erro de busca')
-		# 		self.emit(SIGNAL("forward(QString)"), data)				
-		# 		return 'Nada foi encontrado'
 
 	def lidaCliente(self, conexao):
 		'''
@@ -128,15 +92,7 @@ class ClientTracker(QThread):
 		QThread.__init__(self)
 
 	def run(self):
-		'''
-		Lado cliente. Funciona como thread pois é eventualmente acionado pelo mesmo peer em que roda
-		o servidor no background.
-		Recebe 3 parâmetros:
-		word: É a palavra que o cliente quer procurar em algum servidor vizinho.
-		fromm: É o próprio IP do cliente. Quando este cliente é usado como ponte, deve levar
-		a o IP do cliente que requisitou a palavra até o servidor para que este tome uma decisão
-		ipsearch: É o IP (vizinho) que será buscado para talvez encontrar a palavra em seu dicionário
-		'''	
+
 		serverHost = self.ipsearch
 
 		if self.ipsearch == '':
@@ -232,15 +188,7 @@ class ClientPeer(QThread):
 		QThread.__init__(self)
 
 	def run(self):
-		'''
-		Lado cliente. Funciona como thread pois é eventualmente acionado pelo mesmo peer em que roda
-		o servidor no background.
-		Recebe 3 parâmetros:
-		word: É a palavra que o cliente quer procurar em algum servidor vizinho.
-		fromm: É o próprio IP do cliente. Quando este cliente é usado como ponte, deve levar
-		a o IP do cliente que requisitou a palavra até o servidor para que este tome uma decisão
-		ipsearch: É o IP (vizinho) que será buscado para talvez encontrar a palavra em seu dicionário
-		'''	
+
 		serverHost = self.ipsearch
 
 		sockobj = socket(AF_INET, SOCK_STREAM)

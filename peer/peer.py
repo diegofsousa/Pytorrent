@@ -5,10 +5,8 @@ from socket import *
 from tracker_architecture import ClientPeer, ServerPeer, client_without_thread, ClientFilePeer, ServerFilePeer
 from threading import Thread, current_thread
 import random
-from form_dict import AddElem
 import netifaces
 import time, sys
-from timer_tll import TLL
 
 from pdf_proccess import get_info, pages, pdf_splitter, merger, info_run_pages
 import json
@@ -18,10 +16,10 @@ import webbrowser
 class index(QDialog):
 	def __init__(self, parent=None):
 		super(index, self).__init__(parent)
-
 		
 		self.setWindowTitle("Peer")
 
+		# Selecionando a interface de rede a usar
 		item, ok = QInputDialog.getItem(self, "Interface de redes", 
 		"Selecione sua interface de rede para iniciar a rede torrent:", netifaces.interfaces(), 0, False)
 
@@ -32,6 +30,9 @@ class index(QDialog):
 		if self.qPort[0] != '':
 			self.ip = self.qPort[0]
 
+		self.setWindowTitle("Peer "+self.ip)
+
+		# Conectando ao Tracker através de seu IP
 		self.tracker_ip_dialog = QInputDialog.getText(self, 'Informe o host do Tracker', 'Obs.: o servidor tracker deve ser iniciado primeiro.')
 		print(self.tracker_ip_dialog[0])
 		while self.tracker_ip_dialog[0] == '':
@@ -45,14 +46,12 @@ class index(QDialog):
 		self.connect(self.server, SIGNAL("download(QString)"), self.proccess_and_return_pdf_to_request)
 		self.server.start()
 
+		# Inicia-se o servidor dedicado para recebimento de midias
 		self.server_file = ServerFilePeer(self.ip)
 		self.connect(self.server_file, SIGNAL("already_part(QString)"), self.already_part)
-		#self.connect(self.server, SIGNAL("download(QString)"), self.proccess_and_return_pdf_to_request)
 		self.server_file.start()
 
-		# Initialize tab screen
 		tabs = QTabWidget()
-
 
 		label = QLabel("Procure pelo arquivo: ")
 		self.arquivo_lineEdit = QLineEdit("")
@@ -69,9 +68,6 @@ class index(QDialog):
 		tracker_host_box = QHBoxLayout()
 		tracker_host_box.addWidget(label2)
 		tracker_host_box.addWidget(self.host_lineEdit)
-
-
-		#layout = QVBoxLayout()
 
 		label3 = QLabel("Arquivo: ")
 		self.edit_file = QLineEdit("")
@@ -109,10 +105,7 @@ class index(QDialog):
 		inforlogs = QLabel("Logs:")
 
 		self.text_logs = QTextEdit()
-		#self.text_logs.setDisabled(True)
-
 		self.info_logs = ''
-
 
 		vbox1 = QVBoxLayout()
 		vbox1.addWidget(inforlogs)
@@ -125,8 +118,6 @@ class index(QDialog):
 
 		self.info_logs_donwloads = ''
 
-
-
 		vbox2 = QVBoxLayout()
 		vbox2.addWidget(inforlogs_d)
 		vbox2.addWidget(self.text_logs_donwloads)
@@ -138,7 +129,6 @@ class index(QDialog):
 
 		self.post_download = QPushButton("Fazer download do arquivo selecionado!")
 		
-
 		tab1 = QWidget()
 		tab1.layout = QVBoxLayout()
 		tab1.layout.addLayout(tracker_host_box)
@@ -190,11 +180,6 @@ class index(QDialog):
 
 		tab2.setLayout(tab2.layout)
 
-
-
-		#self.tabs.resize(300,200)
-		
-		# Add tabs
 		tabs.addTab(tab1,"Buscar arquivos na rede")
 		tabs.addTab(tab2,"Meus arquivos")
 		
@@ -204,6 +189,7 @@ class index(QDialog):
 
 		self.setLayout(vbox1)
 
+		# Eventos para os cliques em botões
 		self.connect(self.open_file, SIGNAL("clicked()"), self.open_file_fn)
 		self.connect(self.btn_clean_all, SIGNAL("clicked()"), self.my_files_clean)
 		self.connect(self.post_btn, SIGNAL("clicked()"), self.search_button)
@@ -212,8 +198,6 @@ class index(QDialog):
 		self.file_name_actual = None
 		self.valid_hosts = []
 
-
-		
 		self.setGeometry(300,100,700,430)
 
 	def getfile(self):
@@ -222,13 +206,22 @@ class index(QDialog):
 		self.edit_file.setText(fname)
 
 	def get_up_file(self):
+		'''
+		Este método adiciona um novo arquivo na lista de "meus arquivos"
+		e manda uma requisição ao tracker informando que este arquivo
+		está disponivel na rede torrent.
+		'''
+
+		# Caixa de diálogo para receber arquivo.
 		fname = QFileDialog.getOpenFileName(self, 'Open file', 
 		 '/home/',"PDF files (*.pdf)")
 
 		can_add = True
 
+		# Recupera informações do arquivo (Nome, Caminho, Tamanho, md5,...)
 		info_new_file = get_info(fname)
 
+		# Verifica se um arquivo do mesmo já havia sido disponibilizado na lista
 		for file in self.lista_de_meus_arquivos:
 			if info_new_file['md5'] == file['md5']:
 				msg = QMessageBox.information(self, "Aviso","Este arquivo ja existe na lista!", QMessageBox.Close)
@@ -238,12 +231,11 @@ class index(QDialog):
 			info_new_file['protocol'] = 'new'
 			info_new_file['ip_from'] = self.ip
 			json_prepare = json.dumps(info_new_file)
-			#print(json_prepare)
-			#print(type(json))
 
+			# Encaminha uma thread para avisar disponibilidade ao tracker, e em
+			# seguida exibir na lista de "meus arquivos".
 			if client_without_thread(self.tracker_ip, json_prepare) == True:
 				self.lista_de_meus_arquivos.append(info_new_file)
-				#print(self.lista_de_meus_arquivos)
 				self.reload_my_files_by_list()
 				msg = QMessageBox.information(self, "Mensagem","Obrigado por semear!\nConteudo esta disponivel no Tracker.", QMessageBox.Close)
 			else:
@@ -270,17 +262,20 @@ class index(QDialog):
 
 		if client_without_thread(self.tracker_ip, json_prepare) == True:
 			self.lista_de_meus_arquivos.clear()
-			#print(self.lista_de_meus_arquivos)
 			self.reload_my_files_by_list()
 			msg = QMessageBox.information(self, "Mensagem","Suas participacoes foram removidas do Tracker com sucesso!", QMessageBox.Close)
 		else:
 			msg = QMessageBox.information(self, "Aviso","Ocorreu um erro ao fazer este processamento!", QMessageBox.Close)
 		
 	def search_button(self):
+		'''
+		Este método é responsável pela pesquisa dos arquivos na rede torrent
+		'''
+
 		text = self.arquivo_lineEdit.displayText()
 		upload = self.edit_file.displayText()
 
-		key = 'all' # 'all' files, 'upload' file or 'search' files
+		key = 'all'
 
 		if text == '' and upload != '':
 			print("UP")
@@ -310,11 +305,6 @@ class index(QDialog):
 		json_prepare = json.dumps(json_prepare)
 
 		if client_without_thread(self.tracker_ip, json_prepare) != True:
-			#self.lista_de_meus_arquivos.clear()
-			#print(self.lista_de_meus_arquivos)
-			#self.reload_my_files_by_list()
-			#msg = QMessageBox.information(self, "Mensagem","Suas participacoes foram removidas do Tracker com sucesso!", QMessageBox.Close)
-		
 			msg = QMessageBox.information(self, "Aviso","Ocorreu um erro ao fazer este processamento!", QMessageBox.Close)
 
 	def reload_list(self, text):
@@ -335,9 +325,15 @@ class index(QDialog):
 		webbrowser.open(item['url'])
 
 	def download(self):
+		'''
+		Este método realiza o download de um arquivo.
+		'''
+
+		# 1º passo: idenifica o item selecionado da lista.
 		selected = self.lista.currentRow()
 		item = self.lista_de_palavras[selected]
 
+		# 2º passo: verifica se este arquivo já está na sua lista de arquivos.
 		for iaux in self.lista_de_meus_arquivos:
 			if iaux['md5'] == item['md5']:
 				msg = QMessageBox.information(self, "Aviso","Este arquivo já existe na sua lista!", QMessageBox.Close)
@@ -345,6 +341,8 @@ class index(QDialog):
 
 		self.info_logs +='''\nPreparando download do arquivo "{}"... Revisando seeders...\n'''.format(item['name'])
 
+		# 3º passo: scaneia as portas para verificar atividade e latência dos hosts
+		# que contém o arquivo.
 		self.file_name_actual = item
 		hosts = []
 		self.valid_hosts = []
@@ -365,18 +363,22 @@ class index(QDialog):
 				except Exception as e:
 					pass
 
+		# 4º passo: filtragem para excluir hosts inativos e o próprio host da máquina,
+		# caso necessário.
 		for host in hosts:
 			if host[1] == None:
 				pass
-				#self.info_logs += "\n"+host[0]+"... inacessível"
 			elif host[1] == self.ip:
-				print("esse host eh meu")
 				pass
 			else:
 				self.valid_hosts.append(host)
-				#self.info_logs += "\n"+host[0]+"... " + host[1] + " " + str(host[2])
 
+		# 5º passo: ordena os hosts válidos pelo valor de latência
 		self.valid_hosts.sort(key = sortSecond)
+
+		# 6º passo: faz requisições paralelas para cada host levando as
+		# páginas especificas que cada host deve devolver, segundo os calculos
+		# de porcentagem da função "pages".
 		if len(self.valid_hosts) != 0:
 			pages_req = pages(item['num_pages'], self.valid_hosts)
 
@@ -388,19 +390,20 @@ class index(QDialog):
 
 			for request in pages_req:
 				dump_json = json.dumps({'protocol':'download','ip_from': self.ip, 'md5': item['md5'], 'pages': request[1]})
-				#print(request[0])
-				print(dump_json)
 				self.thr_req.append(ClientPeer(request[0][0], dump_json))
 			for th in self.thr_req:
 				th.start()
 		else:
 			msg = QMessageBox.information(self, "Aviso","Nenhum host esta disponível no momento!", QMessageBox.Close)
 
-
-
 		self.reload_text_logs()
 
 	def proccess_and_return_pdf_to_request(self, text):
+		'''
+		Este método processa e devolve páginas específicas de um arquivo PDF
+		ao requerente.
+		'''
+
 		data = json.loads(text)
 
 		final_file = None
@@ -415,8 +418,14 @@ class index(QDialog):
 			self.client_file.start()
 
 	def already_part(self, text):
+		'''
+		Este método analisa todas as devoluções de mídia PDF
+		quando este peer baixa algum arquivo.
+		'''
 		data = json.loads(text)
 
+		# 1º passo: faz auditoria sobre a requisição e informa a
+		# variável global 'valid_hosts' que este host trouxe o arquivo.
 		for host in self.valid_hosts:
 			if host[0] == data['part_ip']:
 				host[3] = True
@@ -432,6 +441,8 @@ class index(QDialog):
 
 		self.reload_text_logs_downloads()
 
+		# 2º passo: verifica se este foi o ultimo host a trazer o
+		# arquivo. Se for ele fará um novo processo de juntar os PDFs.
 		ready = True
 		for host in self.valid_hosts:
 			if host[3] == False:
@@ -442,20 +453,24 @@ class index(QDialog):
 			for host in self.valid_hosts:
 				paths_ok.append(host[4])
 
+			# 3º passo: Juntando os aquivos PDF.
 			path_final = merger(paths_ok, self.file_name_actual['name'])
 			path_info = get_info(path_final)
 			md5_n = path_info['md5']
 			print(md5_n)
 			print(self.file_name_actual['md5'])
+
+			# 4º passo: Verificando o md5 do arquivo inicial e do baixado...
 			if md5_n == self.file_name_actual['md5']:
 				msg = QMessageBox.information(self, self.file_name_actual['name'],"O seu download foi concluído!\n\n md5 check: Ok!\n" + md5_n + "\n", QMessageBox.Close)
 				path_info['protocol'] = 'add_for_new'
 				path_info['ip_from'] = self.ip
 				json_prepare = json.dumps(path_info)
 
+				# 5º passo: Adiciona o host dessa máquina a lista de hosts
+				# que contem este aquivo ao tracker.
 				if client_without_thread(self.tracker_ip, json_prepare) == True:
 					self.lista_de_meus_arquivos.append(path_info)
-					#print(self.lista_de_meus_arquivos)
 					self.reload_my_files_by_list()
 					msg = QMessageBox.information(self, "Mensagem","Obrigado por semear!\nConteudo esta disponivel no Tracker.", QMessageBox.Close)
 				else:
