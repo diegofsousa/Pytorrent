@@ -78,12 +78,15 @@ class index(QDialog):
 		self.edit_file.setDisabled(True)
 
 		self.btn = QPushButton("...")
+		self.btn_clear_file = QPushButton("Limpar")
 		self.btn.clicked.connect(self.getfile)
+		self.btn_clear_file.clicked.connect(self.clear_file)
 
 		file_box = QHBoxLayout()
 		file_box.addWidget(label3)
 		file_box.addWidget(self.edit_file)
 		file_box.addWidget(self.btn)
+		file_box.addWidget(self.btn_clear_file)
 
 		self.post_btn = QPushButton("Buscar")
 
@@ -115,7 +118,7 @@ class index(QDialog):
 		vbox1.addWidget(inforlogs)
 		vbox1.addWidget(self.text_logs)
 
-		inforlogs_d = QLabel("Downloads:")
+		inforlogs_d = QLabel("Status download:")
 
 		self.text_logs_donwloads = QTextEdit()
 		self.text_logs_donwloads.setDisabled(True)
@@ -247,6 +250,9 @@ class index(QDialog):
 				msg = QMessageBox.information(self, "Aviso","Ocorreu um erro ao adicionar o arquivo ao Tracker!", QMessageBox.Close)
 
 
+	def clear_file(self):
+		self.edit_file.setText('')
+
 	def reload_my_files_by_list(self):
 		self.lista_meus_aquivos.clear()
 
@@ -277,6 +283,7 @@ class index(QDialog):
 		key = 'all' # 'all' files, 'upload' file or 'search' files
 
 		if text == '' and upload != '':
+			print("UP")
 			key = 'upload'
 		elif text != '' and upload == '':
 			key = 'search'
@@ -286,9 +293,14 @@ class index(QDialog):
 							"key":key,
 							"ip_from":self.ip}
 		elif key == 'upload':
+			f = open(upload, "r")
+			text = json.loads(f.read())['name']
+			print("texto")
+			print(text)
 			json_prepare = {"protocol":"search",
 							"key":key,
-							"ip_from":self.ip}
+							"ip_from":self.ip,
+							"term":text}
 		elif key == 'search':
 			json_prepare = {"protocol":"search",
 							"key":key,

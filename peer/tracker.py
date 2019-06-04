@@ -78,11 +78,11 @@ class index(QDialog):
 			self.lista.addItem(item)
 
 		button_remove_files = QPushButton("Remover todos os arquivos")
-		button_remove_all_word = QPushButton("Limpar dicionario")
+		get_torrent_file = QPushButton("Baixar '.torrent' selecionado")
 
 		hbox2 = QHBoxLayout()
 		hbox2.addWidget(button_remove_files)
-		#hbox2.addWidget(button_remove_all_word)
+		hbox2.addWidget(get_torrent_file)
 
 		
 		self.inforvizinhos = QLabel("Vizinhos proximos: " + str(self.lista_de_palavras))
@@ -123,6 +123,7 @@ class index(QDialog):
 		self.connect(self.lista, SIGNAL("itemDoubleClicked(QListWidgetItem *)"), self.clique_arquivo)
 
 		self.connect(button_remove_files, SIGNAL("clicked()"), self.remove_files)
+		self.connect(get_torrent_file, SIGNAL("clicked()"), self.donwload_torrent_file)
 
 		
 		self.setGeometry(300,100,700,430)
@@ -155,16 +156,26 @@ class index(QDialog):
 
 		if search['key'] == 'all':
 			json_parametrizado = self.lista_de_palavras
-		elif search['key'] == 'search':
+		else:
 			lista = list(filter(lambda x: re.search(search['term'], x['name'], re.IGNORECASE), self.lista_de_palavras))
 			json_parametrizado = lista
-		else:
-			json_parametrizado = self.lista_de_palavras
 
 		json_final = {'protocol': 'reload_list',
 					  'data':json_parametrizado}
 
 		self.client = client_without_thread(search['ip_from'], json.dumps(json_final))
+
+	def donwload_torrent_file(self):
+		selected = self.lista_de_palavras[self.lista.currentRow()]
+		j_selected = json.dumps(selected)
+		print(j_selected)
+
+		try:
+			arquivo = open('torrent_files/' + selected['name'].split('.')[0] + ".torrent", 'r+')
+		except FileNotFoundError:
+			arquivo = open('torrent_files/' + selected['name'].split('.')[0] + ".torrent", 'w+')
+			arquivo.writelines(j_selected)
+		arquivo.close()
 		
 
 	def add_viz(self):
