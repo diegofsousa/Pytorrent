@@ -5,7 +5,8 @@ Protótipo de rede P2P Torrent escrito em Python baseado em sockets puros.
 ## 1. Da inicialização
 
 1.1. A arquitetura segue o proposto solicitado pelo professor da disciplina, onde os clientes (<b>peers</b>) são conectados ao servidor <b>tracker</b>. O servidor <b>tracker</b> armazena, em tempo de memória, todos os arquivos disponíveis na rede, como sugere a imagem abaixo:
-[imagem]
+
+![Servidor tracker em funcionamento](docs/torrent01.jpg)
 
 1.2. Para iniciar o ambiente basta abrir um terminal e fazer os seguintes passos:
 > 1º ```cd torrent```<br>
@@ -14,13 +15,13 @@ Protótipo de rede P2P Torrent escrito em Python baseado em sockets puros.
 
 1.3. O servidor <b>tracker</b> DEVE ser inicializado antes dos demais <b>peers</b> com o comando ```python tracker.py```. Informe a interface de rede e o IP referente a esta maquina. Se a conexão for cabeada ou por máquina virtual, escolha a interface ```eth0``` e logo após apenas confirme o IP que a aplicação detectou.
 
-[imagem]
+![Selecionando interface de rede](docs/torrent02.jpg)
 
 1.4. Os demais clientes <b>peers</b> podem ser inicializados nas outras máquinas através do comando ```python peer.py```. Assim como o <b>tracker</b>, o <b>peer</b> também necessita da interface e IP correspondente. A mesma informação do item 1.3 vale para este caso.
 
 O próximo passo é apontar o cliente <b>peer</b> para o <b>tracker</b> específico informando o IP relativo ao <b>tracker</b>, conforme a imagem abaixo:
 
-[imagem]
+![Apontando ao tracker](docs/torrent04.jpg)
 
 <b>SE VOCÊ CHEGOU ATÉ AQUI, SUA REDE P2P ESTÁ PRONTA \o/</b>, vamos para o passo seguinte.
 
@@ -30,7 +31,7 @@ O próximo passo é apontar o cliente <b>peer</b> para o <b>tracker</b> específ
 
 Ao disponibilizar um novo arquivo, este vai aparecer automaicamente na listagem do <b>tracker</b> - um clique duplo sobre o item exibirá informações detalhadas sobre número de palavras por página, hosts que contém a mídia e etc.
 
-[imagem]
+![Detalhes de um item](docs/torrent05.jpg)
 
 2.2. Ainda no <b>tracker</b>, existe a possibilidade de gerar arquivos ".torrent" das mídias contidas na listagem através do botão "baixar .torrent selecionado"
 
