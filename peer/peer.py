@@ -19,6 +19,7 @@ class index(QDialog):
 		
 		self.setWindowTitle("Peer")
 
+
 		# Selecionando a interface de rede a usar
 		item, ok = QInputDialog.getItem(self, "Interface de redes", 
 		"Selecione sua interface de rede para iniciar a rede torrent:", netifaces.interfaces(), 0, False)
@@ -333,6 +334,14 @@ class index(QDialog):
 		selected = self.lista.currentRow()
 		item = self.lista_de_palavras[selected]
 
+		self.notifyIcon = QSystemTrayIcon()
+		self.notifyIcon.setVisible(True)
+
+		self.notifyIcon.showMessage(
+					"Íníciando download",
+					item['name'],
+					QSystemTrayIcon.Information,3000)
+
 		# 2º passo: verifica se este arquivo já está na sua lista de arquivos.
 		for iaux in self.lista_de_meus_arquivos:
 			if iaux['md5'] == item['md5']:
@@ -413,6 +422,13 @@ class index(QDialog):
 				final_file = file
 
 		if final_file != None:
+			self.notifyIcon = QSystemTrayIcon()
+			self.notifyIcon.setVisible(True)
+
+			self.notifyIcon.showMessage(
+						"Peer " + data['ip_from'] + " solicitou o conteúdo '"+ final_file["name"] +"'.",
+						str(len(data["pages"])) + " serão enviadas.",
+						QSystemTrayIcon.Information,3000)
 			path_file = pdf_splitter(self.ip, final_file["url"], data["pages"], final_file["md5"])
 			self.client_file = ClientFilePeer(data['ip_from'], path_file, path_file.split("/")[1])
 			self.client_file.start()
@@ -472,6 +488,15 @@ class index(QDialog):
 				if client_without_thread(self.tracker_ip, json_prepare) == True:
 					self.lista_de_meus_arquivos.append(path_info)
 					self.reload_my_files_by_list()
+
+					self.notifyIcon = QSystemTrayIcon()
+					self.notifyIcon.setVisible(True)
+
+					self.notifyIcon.showMessage(
+								"Semeando conteúdo",
+								self.file_name_actual['name'],
+								QSystemTrayIcon.Information,3000)
+
 					msg = QMessageBox.information(self, "Mensagem","Obrigado por semear!\nConteudo esta disponivel no Tracker.", QMessageBox.Close)
 				else:
 					msg = QMessageBox.information(self, "Aviso","Ocorreu um erro ao adicionar o arquivo ao Tracker!", QMessageBox.Close)
