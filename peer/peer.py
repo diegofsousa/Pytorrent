@@ -19,7 +19,6 @@ class index(QDialog):
 		
 		self.setWindowTitle("Peer")
 
-
 		# Selecionando a interface de rede a usar
 		item, ok = QInputDialog.getItem(self, "Interface de redes", 
 		"Selecione sua interface de rede para iniciar a rede torrent:", netifaces.interfaces(), 0, False)
@@ -427,7 +426,7 @@ class index(QDialog):
 
 			self.notifyIcon.showMessage(
 						"Peer " + data['ip_from'] + " solicitou o conteúdo '"+ final_file["name"] +"'.",
-						str(len(data["pages"])) + " serão enviadas.",
+						str(len(data["pages"])) + " páginas serão enviadas.",
 						QSystemTrayIcon.Information,3000)
 			path_file = pdf_splitter(self.ip, final_file["url"], data["pages"], final_file["md5"])
 			self.client_file = ClientFilePeer(data['ip_from'], path_file, path_file.split("/")[1])
