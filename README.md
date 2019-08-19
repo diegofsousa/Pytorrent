@@ -4,7 +4,7 @@ Protótipo de rede P2P Torrent escrito em Python baseado em sockets puros.
 
 ## 1. Da inicialização
 
-1.1. A arquitetura segue o proposto solicitado pelo professor da disciplina, onde os clientes (<b>peers</b>) são conectados ao servidor <b>tracker</b>. O servidor <b>tracker</b> armazena, em tempo de memória, todos os arquivos disponíveis na rede, como sugere a imagem abaixo:
+1.1. A arquitetura segue o seguinte proposto. Os clientes (<b>peers</b>) são conectados ao servidor <b>tracker</b>. O servidor <b>tracker</b> armazena, em tempo de memória, todos os arquivos disponíveis na rede, como sugere a imagem abaixo:
 
 ![Servidor tracker em funcionamento](docs/torrent01.jpg)
 
